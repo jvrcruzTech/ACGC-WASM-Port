@@ -286,7 +286,12 @@ static int str_ends_ci(const char* s, const char* suffix) {
 }
 
 static int find_disc_image(char* out_path, int out_sz) {
-    static const char* dirs[] = { ".", "orig", "rom", NULL };
+    static const char* dirs[] = {
+#ifdef __EMSCRIPTEN__
+        "/rom",
+#endif
+        ".", "orig", "rom", NULL
+    };
     int d;
 
     for (d = 0; dirs[d]; d++) {

@@ -33,7 +33,11 @@
 
 /* Now include GL via SDL2 (avoid pc_platform.h which pulls in game types.h) */
 #include <SDL2/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#else
 #include <glad/gl.h>
+#endif
 #include "fm2play.h"
 #include "audio.h"
 
@@ -395,7 +399,11 @@ void pc_fixnes_render_frame(uint16_t *fb) {
     glBindTexture(GL_TEXTURE_2D, fixnes_texture);
     if (g_pc_profile_enabled) pc_profiler_add_count_texture_bind_slow();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 224, 0,
+#ifdef __EMSCRIPTEN__
+                 GL_RGB, GL_UNSIGNED_SHORT_5_6_5, fb + 256 * 8);
+#else
                  GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV, fb + 256 * 8);
+#endif
 
     /* 0 = stretch to window, 1 = centered 4:3 with pillar/letterbox. */
     int win_w = g_pc_window_w;

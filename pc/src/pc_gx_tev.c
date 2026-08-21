@@ -33,6 +33,21 @@ static char* load_shader(const char* filename) {
     snprintf(path, sizeof(path), "shaders/%s", filename);
     char* src = load_text_file(path);
     if (src) {
+#ifdef __EMSCRIPTEN__
+        if (strncmp(src, "#version 330 core", 17) == 0) {
+            const char* web_version = "#version 300 es\nprecision highp float;\nprecision highp int;";
+            size_t web_len = strlen(web_version);
+            size_t old_len = strlen("#version 330 core");
+            size_t tail_len = strlen(src + old_len);
+            char* web_src = (char*)malloc(web_len + tail_len + 1);
+            if (web_src) {
+                memcpy(web_src, web_version, web_len);
+                memcpy(web_src + web_len, src + old_len, tail_len + 1);
+                free(src);
+                src = web_src;
+            }
+        }
+#endif
         printf("[PC/TEV] Loaded shader: %s\n", path);
     } else {
         fprintf(stderr, "FATAL: Could not load shader: %s\n", path);
@@ -362,7 +377,16 @@ static char* build_specialized_source(const PCGXShaderKey* k) {
     if (!out) return NULL;
 
     size_t pos = 0;
+#ifdef __EMSCRIPTEN__
+    {
+        const char* version = "#version 300 es\nprecision highp float;\nprecision highp int;\n";
+        size_t version_len = strlen(version);
+        memcpy(out + pos, version, version_len);
+        pos += version_len;
+    }
+#else
     memcpy(out + pos, "#version 330 core\n", 18); pos += 18;
+#endif
     memcpy(out + pos, consts, (size_t)clen); pos += (size_t)clen;
 
     const char* p = s_frag_base;

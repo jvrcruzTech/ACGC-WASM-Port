@@ -5,6 +5,10 @@
 JSUList<JKRFileLoader> JKRFileLoader::sVolumeList;
 JKRFileLoader* JKRFileLoader::sCurrentVolume;
 
+static int jkr_tolower(int ch) {
+    return ch >= 'A' && ch <= 'Z' ? ch + ('a' - 'A') : ch;
+}
+
 JKRFileLoader::JKRFileLoader() : JKRDisposer(), mFileLoaderLink(this) {
     mVolumeName = nullptr;
     mVolumeType = 0;
@@ -124,7 +128,7 @@ const char* JKRFileLoader::fetchVolumeName(char* buffer, long bufferSize, const 
         path++;
         while (*path != 0 && *path != '/') {
             if (1 < bufferSize) {
-                *buffer = _tolower(*path);
+                *buffer = jkr_tolower(*path);
                 buffer++;
                 bufferSize--;
             }

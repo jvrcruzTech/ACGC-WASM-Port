@@ -10,7 +10,12 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#include <emscripten.h>
+#else
 #include <glad/gl.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +57,7 @@
 #include <windows.h>
 #undef near
 #undef far
-#else
+#elif !defined(__EMSCRIPTEN__)
 #include <sys/mman.h>
 #include <dlfcn.h>
 #include <elf.h>

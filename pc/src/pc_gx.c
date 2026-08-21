@@ -31,6 +31,24 @@ typedef struct { u8 r, g, b, a; } GXColor;
 #undef glUniformMatrix3fv
 #undef glUniformMatrix4fv
 
+#ifdef __EMSCRIPTEN__
+#define glUniform1i(...)        (pc_profiler_add_count_uniform(), glUniform1i(__VA_ARGS__))
+#define glUniform2i(...)        (pc_profiler_add_count_uniform(), glUniform2i(__VA_ARGS__))
+#define glUniform3i(...)        (pc_profiler_add_count_uniform(), glUniform3i(__VA_ARGS__))
+#define glUniform4i(...)        (pc_profiler_add_count_uniform(), glUniform4i(__VA_ARGS__))
+#define glUniform1f(...)        (pc_profiler_add_count_uniform(), glUniform1f(__VA_ARGS__))
+#define glUniform2f(...)        (pc_profiler_add_count_uniform(), glUniform2f(__VA_ARGS__))
+#define glUniform3f(...)        (pc_profiler_add_count_uniform(), glUniform3f(__VA_ARGS__))
+#define glUniform4f(...)        (pc_profiler_add_count_uniform(), glUniform4f(__VA_ARGS__))
+#define glUniform1iv(...)       (pc_profiler_add_count_uniform(), glUniform1iv(__VA_ARGS__))
+#define glUniform2iv(...)       (pc_profiler_add_count_uniform(), glUniform2iv(__VA_ARGS__))
+#define glUniform3iv(...)       (pc_profiler_add_count_uniform(), glUniform3iv(__VA_ARGS__))
+#define glUniform4iv(...)       (pc_profiler_add_count_uniform(), glUniform4iv(__VA_ARGS__))
+#define glUniform4fv(...)       (pc_profiler_add_count_uniform(), glUniform4fv(__VA_ARGS__))
+#define glUniform3fv(...)       (pc_profiler_add_count_uniform(), glUniform3fv(__VA_ARGS__))
+#define glUniformMatrix3fv(...) (pc_profiler_add_count_uniform(), glUniformMatrix3fv(__VA_ARGS__))
+#define glUniformMatrix4fv(...) (pc_profiler_add_count_uniform(), glUniformMatrix4fv(__VA_ARGS__))
+#else
 #define glUniform1i(...)        (pc_profiler_add_count_uniform(), glad_glUniform1i(__VA_ARGS__))
 #define glUniform2i(...)        (pc_profiler_add_count_uniform(), glad_glUniform2i(__VA_ARGS__))
 #define glUniform3i(...)        (pc_profiler_add_count_uniform(), glad_glUniform3i(__VA_ARGS__))
@@ -47,6 +65,7 @@ typedef struct { u8 r, g, b, a; } GXColor;
 #define glUniform3fv(...)       (pc_profiler_add_count_uniform(), glad_glUniform3fv(__VA_ARGS__))
 #define glUniformMatrix3fv(...) (pc_profiler_add_count_uniform(), glad_glUniformMatrix3fv(__VA_ARGS__))
 #define glUniformMatrix4fv(...) (pc_profiler_add_count_uniform(), glad_glUniformMatrix4fv(__VA_ARGS__))
+#endif
 
 /* --- Global GX State --- */
 PCGXState g_gx;
@@ -398,7 +417,11 @@ void pc_gx_begin_frame(void) {
     glViewport(0, 0, g_pc_window_w, g_pc_window_h);
     pc_gx_viewport_state_invalidate();
 #endif
+#ifdef __EMSCRIPTEN__
+    glClearDepthf((GLfloat)g_gx.clear_depth);
+#else
     glClearDepth(g_gx.clear_depth);
+#endif
     glClearColor(g_gx.clear_color[0], g_gx.clear_color[1], g_gx.clear_color[2], g_gx.clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     pc_profiler_add_time(PC_PROF_TIMER_GX_BEGIN, prof_start);
@@ -1358,7 +1381,11 @@ void GXSetViewport(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz) {
 
     pc_gx_draw_pending(); /* glViewport is not dirty-tracked */
     glViewport(gl_x, gl_y, gl_w, gl_h);
+#ifdef __EMSCRIPTEN__
+    glDepthRangef((GLfloat)nearz, (GLfloat)farz);
+#else
     glDepthRange((double)nearz, (double)farz);
+#endif
     s_gl_viewport.valid = 1;
     s_gl_viewport.x = gl_x;
     s_gl_viewport.y = gl_y;
@@ -1982,7 +2009,12 @@ void GXSetTexCoordGen2(u32 dst, u32 func, u32 src, u32 mtx, GXBool normalize, u3
     }
 }
 void GXSetLineWidth(u8 width, u32 texOffsets) { glLineWidth(width / 16.0f); }
-void GXSetPointSize(u8 size, u32 texOffsets) { glPointSize(size / 16.0f); }
+void GXSetPointSize(u8 size, u32 texOffsets) {
+#ifndef __EMSCRIPTEN__
+    glPointSize(size / 16.0f);
+#endif
+    (void)size; (void)texOffsets;
+}
 void GXEnableTexOffsets(u32 coord, GXBool line, GXBool point) {
     (void)coord; (void)line; (void)point;
 }
@@ -2410,4 +2442,3 @@ void GXReadXfRasMetric(u32* xf_wait_in, u32* xf_wait_out, u32* ras_busy, u32* cl
 /* --- Verify --- */
 void GXSetVerifyLevel(u32 level) { (void)level; }
 void* GXSetVerifyCallback(void* cb) { return NULL; }
-

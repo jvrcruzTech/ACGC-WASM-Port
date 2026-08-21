@@ -50,9 +50,15 @@ void pc_platform_init(void) {
         exit(1);
     }
 
+#ifdef __EMSCRIPTEN__
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 #ifdef PC_ENHANCEMENTS
@@ -91,6 +97,7 @@ void pc_platform_init(void) {
         exit(1);
     }
 
+#ifndef __EMSCRIPTEN__
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         fprintf(stderr, "gladLoadGL failed\n");
         SDL_GL_DeleteContext(g_pc_gl_context);
@@ -98,15 +105,18 @@ void pc_platform_init(void) {
         SDL_Quit();
         exit(1);
     }
+#endif
 
     SDL_GL_SetSwapInterval(g_pc_settings.vsync);
 
     pc_platform_update_window_size();
 
 #ifdef PC_ENHANCEMENTS
+#ifndef __EMSCRIPTEN__
     if (g_pc_settings.msaa > 0) {
         glEnable(GL_MULTISAMPLE);
     }
+#endif
 #endif
 
     pc_gx_init();
@@ -334,6 +344,9 @@ int main(int argc, char* argv[]) {
     /* Redirect stdout/stderr to NUL unless verbose — unbuffered terminal writes
      * are extremely slow on Windows and tank FPS. */
     if (!g_pc_verbose && !g_pc_profile_enabled) {
+#ifdef __EMSCRIPTEN__
+        /* Keep browser console diagnostics visible during bring-up. */
+#else
 #ifdef _WIN32
         freopen("NUL", "w", stdout);
         freopen("NUL", "w", stderr);
@@ -341,13 +354,17 @@ int main(int argc, char* argv[]) {
         freopen("/dev/null", "w", stdout);
         freopen("/dev/null", "w", stderr);
 #endif
+#endif
     } else {
         setvbuf(stdout, NULL, _IONBF, 0);
         setvbuf(stderr, NULL, _IONBF, 0);
     }
 
     /* exe image range for seg2k0 — BSS can overlap N64 segment addresses */
-#ifdef _WIN32
+#ifdef __EMSCRIPTEN__
+    pc_image_base = 0;
+    pc_image_end = 0;
+#elif defined(_WIN32)
     {
         HMODULE exe = GetModuleHandle(NULL);
         IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)exe;

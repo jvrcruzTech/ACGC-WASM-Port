@@ -21,6 +21,7 @@ orig/*/*
 # Build files
 build/
 build32/
+pc/build-wasm*/
 .ninja_*
 build.ninja
 

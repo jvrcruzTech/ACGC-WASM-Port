@@ -388,9 +388,9 @@ BOOL Jac_DeleteHeap(jaheap_* heap)
 		heap2 = heap->parent->firstChild;
 		if (heap2 == heap) {
 			heap->parent->firstChild = heap->nextSibling;
-			if (heap->nextSibling == NULL) {
-				heap->parent->usedSize = NULL;
-			}
+				if (heap->nextSibling == NULL) {
+					heap->parent->usedSize = 0;
+				}
 		} else {
 			while (TRUE) {
 				if (heap2 == NULL) {

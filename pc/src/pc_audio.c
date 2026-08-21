@@ -49,6 +49,10 @@ static int pc_audio_producer_func(void* data) {
 }
 
 void pc_audio_start_producer_thread(void) {
+#ifdef __EMSCRIPTEN__
+    printf("[AUDIO] Producer thread disabled on web; audio is fed from game frames\n");
+    return;
+#else
     if (audio_producer_thread) return;
     SDL_AtomicSet(&audio_thread_running, 1);
     audio_producer_thread = SDL_CreateThread(pc_audio_producer_func, "AudioProducer", NULL);
@@ -57,6 +61,7 @@ void pc_audio_start_producer_thread(void) {
     } else {
         printf("[AUDIO] Failed to create producer thread: %s\n", SDL_GetError());
     }
+#endif
 }
 
 /* --- SDL audio callback (runs on SDL's audio device thread) --- */
@@ -200,12 +205,14 @@ int pc_audio_is_active(void) {
 }
 
 void pc_audio_shutdown(void) {
+#ifndef __EMSCRIPTEN__
     /* Stop producer thread first */
     SDL_AtomicSet(&audio_thread_running, 0);
     if (audio_producer_thread) {
         SDL_WaitThread(audio_producer_thread, NULL);
         audio_producer_thread = NULL;
     }
+#endif
     if (audio_device != 0) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;

@@ -306,16 +306,18 @@ static const OthermodeParameterInfo l_tbl[] = {
 #include "../src/static/libforest/emu64/emu64_print.cpp"
 
 /* Helper function to convert N64 texture format to Dolphin format */
+#define EMU64_INVALID_TF ((u16)0xFFFF)
 __declspec(section ".rodata") const u16 emu64::fmtxtbl[8][4] = {
-    { GX_TF_CMPR, -1, GX_TF_RGB5A3, GX_TF_RGBA8 }, /* G_IM_FMT_RGBA */
-    { -1, -1, -1, -1 },                            /* G_IM_FMT_YUV */
-    { GX_TF_C4, GX_TF_C8, 0xA, -1 },               /* G_IM_FMT_CI */
-    { -1, GX_TF_IA4, GX_TF_IA8, -1 },              /* G_IM_FMT_IA */
-    { GX_TF_I4, GX_TF_I8, GX_TF_RGB565, -1 },      /* G_IM_FMT_I */
-    { GX_TF_CMPR, GX_CTF_A8, GX_TF_RGB5A3, -1 },   /* ?? */
-    { -1, GX_TF_Z8, GX_TF_Z16, GX_TF_Z24X8 },      /* ?? */
-    { -1, -1, -1, -1 }                             /* ?? */
+    { GX_TF_CMPR, EMU64_INVALID_TF, GX_TF_RGB5A3, GX_TF_RGBA8 }, /* G_IM_FMT_RGBA */
+    { EMU64_INVALID_TF, EMU64_INVALID_TF, EMU64_INVALID_TF, EMU64_INVALID_TF }, /* G_IM_FMT_YUV */
+    { GX_TF_C4, GX_TF_C8, 0xA, EMU64_INVALID_TF },               /* G_IM_FMT_CI */
+    { EMU64_INVALID_TF, GX_TF_IA4, GX_TF_IA8, EMU64_INVALID_TF }, /* G_IM_FMT_IA */
+    { GX_TF_I4, GX_TF_I8, GX_TF_RGB565, EMU64_INVALID_TF },      /* G_IM_FMT_I */
+    { GX_TF_CMPR, GX_CTF_A8, GX_TF_RGB5A3, EMU64_INVALID_TF },   /* ?? */
+    { EMU64_INVALID_TF, GX_TF_Z8, GX_TF_Z16, GX_TF_Z24X8 },      /* ?? */
+    { EMU64_INVALID_TF, EMU64_INVALID_TF, EMU64_INVALID_TF, EMU64_INVALID_TF } /* ?? */
 };
+#undef EMU64_INVALID_TF
 
 static const u8 tbla[8][2] = {
     { GX_CA_APREV, GX_CA_KONST }, { GX_CA_TEXA, GX_CA_TEXA }, { GX_CA_TEXA, GX_CA_TEXA }, { GX_CA_A1, GX_CA_A1 },

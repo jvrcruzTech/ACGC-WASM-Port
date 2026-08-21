@@ -1,4 +1,5 @@
 #include <MSL_C/ctype.h>
+#include <ctype.h>
 #include <string.h>
 
 #include "JSystem/JKernel/JKRArchive.h"
@@ -6,6 +7,10 @@
 #include "types.h"
 
 u32 JKRArchive::sCurrentDirID;
+
+static int jkr_tolower(int ch) {
+    return ch >= 'A' && ch <= 'Z' ? ch + ('a' - 'A') : ch;
+}
 
 JKRArchive::JKRArchive() {
     mIsMounted = false;
@@ -159,7 +164,7 @@ void JKRArchive::CArcName::store(const char* name) {
     mHash = 0;
     int count = 0;
     while (*name) {
-        int lower = tolower(*name);
+        int lower = jkr_tolower(*name);
         mHash = lower + mHash * 3;
         if (count < 0x100) {
             mString[count++] = lower;
@@ -174,7 +179,7 @@ const char* JKRArchive::CArcName::store(const char* name, char endChar) {
     mHash = 0;
     int count = 0;
     for (; *name && *name != endChar; name++) {
-        int lower = tolower(*name);
+        int lower = jkr_tolower(*name);
         mHash = lower + mHash * 3;
         if (count < 0x100) {
             mString[count++] = lower;
