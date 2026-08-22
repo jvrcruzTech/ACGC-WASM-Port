@@ -268,12 +268,12 @@ static void decode_I4(const u8* src, u8* dst, int w, int h) {
                     if (px0 < w && py < h) {
                         int idx = (py * w + px0) * 4;
                         dst[idx] = dst[idx+1] = dst[idx+2] = i0;
-                        dst[idx+3] = 255;
+                        dst[idx+3] = i0;
                     }
                     if (px1 < w && py < h) {
                         int idx = (py * w + px1) * 4;
                         dst[idx] = dst[idx+1] = dst[idx+2] = i1;
-                        dst[idx+3] = 255;
+                        dst[idx+3] = i1;
                     }
                 }
             }
@@ -293,7 +293,7 @@ static void decode_I8(const u8* src, u8* dst, int w, int h) {
                     if (px < w && py < h) {
                         int idx = (py * w + px) * 4;
                         dst[idx] = dst[idx+1] = dst[idx+2] = val;
-                        dst[idx+3] = 255;
+                        dst[idx+3] = val;
                     }
                 }
             }
