@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #ifdef __EMSCRIPTEN__
-#include <emscripten/fetch.h>
+#include <emscripten.h>
 #endif
 #include "types.h"
 #include "pc_disc.h"
@@ -59,43 +59,52 @@ static int g_fst_file_count = 0;
 
 /* ---- disc I/O ---- */
 #ifdef __EMSCRIPTEN__
+EM_JS(int, pc_web_rom_read_js, (const char* url_ptr, unsigned int offset, unsigned int size, unsigned int dest_ptr), {
+    const url = UTF8ToString(url_ptr);
+    const end = offset + size - 1;
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, false);
+    xhr.responseType = "arraybuffer";
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Range", "bytes=" + offset + "-" + end);
+    try {
+        xhr.send();
+    } catch (err) {
+        console.error("[AC ROM] fetch failed", err);
+        return 0;
+    }
+    if ((xhr.status !== 206 && xhr.status !== 200) || !xhr.response) {
+        console.error("[AC ROM] fetch status=" + xhr.status + " range=bytes=" + offset + "-" + end);
+        return 0;
+    }
+    const data = new Uint8Array(xhr.response);
+    if (data.length < size) {
+        console.error("[AC ROM] short read bytes=" + data.length + " wanted=" + size);
+        return 0;
+    }
+    HEAPU8.set(data.subarray(0, size), dest_ptr);
+    return 1;
+});
+
 static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
-    char range[64];
-    const char* headers[3];
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_t* fetch;
     int ok;
 
     if (!df->is_remote || size == 0) return 0;
 
-    snprintf(range, sizeof(range), "bytes=%lu-%lu", (unsigned long)offset, (unsigned long)(offset + size - 1));
     if (g_pc_verbose) {
-        printf("[PC] ROM fetch: %s %s\n", df->url, range);
+        printf("[PC] ROM fetch: %s bytes=%lu-%lu\n",
+               df->url,
+               (unsigned long)offset,
+               (unsigned long)(offset + size - 1));
     }
-    headers[0] = "Range";
-    headers[1] = range;
-    headers[2] = NULL;
-
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "GET");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS | EMSCRIPTEN_FETCH_REPLACE;
-    attr.requestHeaders = headers;
-    attr.withCredentials = 1;
-
-    fetch = emscripten_fetch(&attr, df->url);
-    ok = fetch &&
-         (fetch->status == 206 || fetch->status == 200) &&
-         fetch->data != NULL &&
-         fetch->numBytes >= size;
-    if (ok) memcpy(dest, fetch->data, size);
-    else if (g_pc_verbose) {
-        printf("[PC] ROM fetch failed: %s %s status=%u bytes=%lu wanted=%lu\n",
-               df->url, range,
-               fetch ? fetch->status : 0,
-               fetch ? (unsigned long)fetch->numBytes : 0UL,
+    ok = pc_web_rom_read_js(df->url, offset, size, (unsigned int)dest);
+    if (!ok && g_pc_verbose) {
+        printf("[PC] ROM fetch failed: %s bytes=%lu-%lu wanted=%lu\n",
+               df->url,
+               (unsigned long)offset,
+               (unsigned long)(offset + size - 1),
                (unsigned long)size);
     }
-    if (fetch) emscripten_fetch_close(fetch);
     return ok;
 }
 #endif
