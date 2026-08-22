@@ -3,6 +3,9 @@
 #include "pc_platform.h"
 #include "m_player_lib.h"
 #include "ac_birth_control.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 PCSettings g_pc_settings = {
     .window_width  = PC_SCREEN_WIDTH,
@@ -23,6 +26,39 @@ PCSettings g_pc_settings = {
 };
 
 static const char* SETTINGS_FILE = "settings.ini";
+
+#ifdef __EMSCRIPTEN__
+EM_JS(char*, pc_web_save_get_text_js, (const char* key_ptr), {
+    const key = UTF8ToString(key_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
+    xhr.responseType = "arraybuffer";
+    xhr.withCredentials = true;
+    xhr.send();
+    if (xhr.status === 404) return 0;
+    if (xhr.status !== 200 || !xhr.response) return 0;
+    const text = new TextDecoder().decode(new Uint8Array(xhr.response));
+    const len = lengthBytesUTF8(text) + 1;
+    const ptr = _malloc(len);
+    stringToUTF8(text, ptr, len);
+    return ptr;
+});
+
+EM_JS(void, pc_web_save_put_text_js, (const char* key_ptr, const char* text_ptr), {
+    const key = UTF8ToString(key_ptr);
+    const text = UTF8ToString(text_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.send(new TextEncoder().encode(text));
+    if (xhr.status < 200 || xhr.status >= 300) {
+        console.error("[Settings] Failed to save " + key + " to server: " + xhr.status);
+    }
+});
+#endif
 
 static const char* DEFAULT_SETTINGS =
     "[Graphics]\n"
@@ -150,14 +186,63 @@ static void apply_borderless_acres_setting(void) {
 }
 
 static void write_defaults(const char* path) {
+#ifdef __EMSCRIPTEN__
+    pc_web_save_put_text_js(path, DEFAULT_SETTINGS);
+#else
     FILE* f = fopen(path, "w");
     if (f) {
         fputs(DEFAULT_SETTINGS, f);
         fclose(f);
     }
+#endif
 }
 
 void pc_settings_save(void) {
+#ifdef __EMSCRIPTEN__
+    char text[2048];
+    snprintf(text, sizeof(text),
+        "[Graphics]\n"
+        "# Window size (ignored in fullscreen)\n"
+        "window_width = %d\n"
+        "window_height = %d\n\n"
+        "# 0 = windowed, 1 = fullscreen, 2 = borderless fullscreen\n"
+        "fullscreen = %d\n\n"
+        "# Vertical sync: 0 = off, 1 = on\n"
+        "vsync = %d\n\n"
+        "# Max FPS: 60, 120, 240, or 0 for uncapped\n"
+        "max_fps = %d\n\n"
+        "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n"
+        "msaa = %d\n\n"
+        "# Texture filtering: 0 = nearest-neighbor, 1 = use the game's filtering\n"
+        "texture_filtering = %d\n\n"
+        "[Enhancements]\n"
+        "# Preload HD textures at startup: 0 = off (load on demand), 1 = preload, 2 = preload + cache file (fastest)\n"
+        "preload_textures = %d\n\n"
+        "[Gameplay]\n"
+        "# Disable Mr. Resetti: 0 = normal, 1 = disable\n"
+        "disable_resetti = %d\n\n"
+        "# Shop upgrade visitor requirement (Nookington's needs a shopper from another town): 0 = required, 1 = not required\n"
+        "disable_shop_visitor_req = %d\n\n"
+        "# Borderless acres: 0 = original acre transitions (faster, draws less), 1 = continuous movement/camera\n"
+        "borderless_acres = %d\n\n"
+        "# NES emulator aspect ratio: 0 = stretch to fullscreen, 1 = 4:3 pillarbox\n"
+        "nes_aspect = %d\n\n"
+        "[Audio]\n"
+        "# Master output volume as a percentage (0-100)\n"
+        "master_volume = %d\n\n"
+        "[Input]\n"
+        "# Gamepad stick deadzones as a percentage (0-40)\n"
+        "stick_deadzone = %d\n"
+        "cstick_deadzone = %d\n",
+        g_pc_settings.window_width, g_pc_settings.window_height, g_pc_settings.fullscreen,
+        g_pc_settings.vsync, g_pc_settings.max_fps, g_pc_settings.msaa,
+        g_pc_settings.texture_filtering, g_pc_settings.preload_textures,
+        g_pc_settings.disable_resetti, g_pc_settings.disable_shop_visitor_req,
+        g_pc_settings.borderless_acres, g_pc_settings.nes_aspect, g_pc_settings.master_volume,
+        g_pc_settings.stick_deadzone, g_pc_settings.cstick_deadzone);
+    pc_web_save_put_text_js(SETTINGS_FILE, text);
+    printf("[Settings] Saved %s to server\n", SETTINGS_FILE);
+#else
     FILE* f = fopen(SETTINGS_FILE, "w");
     if (!f) {
         printf("[Settings] Failed to write %s\n", SETTINGS_FILE);
@@ -210,6 +295,7 @@ void pc_settings_save(void) {
     fprintf(f, "cstick_deadzone = %d\n", g_pc_settings.cstick_deadzone);
     fclose(f);
     printf("[Settings] Saved %s\n", SETTINGS_FILE);
+#endif
 }
 
 /* Accessor for TUs that can't include pc_settings.h (pc_nes_fixnes.c). */
@@ -358,6 +444,43 @@ void pc_settings_apply(void) {
 }
 
 void pc_settings_load(void) {
+#ifdef __EMSCRIPTEN__
+    char* text = pc_web_save_get_text_js(SETTINGS_FILE);
+    if (!text || text[0] == '\0') {
+        free(text);
+        write_defaults(SETTINGS_FILE);
+        text = strdup(DEFAULT_SETTINGS);
+        printf("[Settings] Created default %s on server\n", SETTINGS_FILE);
+    }
+
+    char* saveptr = NULL;
+    char* line = strtok_r(text, "\n", &saveptr);
+    while (line) {
+        const char* p = skip_ws(line);
+
+        if (*p != '#' && *p != ';' && *p != '\0' && *p != '\n' && *p != '[') {
+            char* eq = strchr(line, '=');
+            if (eq) {
+                *eq = '\0';
+                char* key = (char*)skip_ws(line);
+                trim_end(key);
+                char* value = (char*)skip_ws(eq + 1);
+                trim_end(value);
+                if (*key && *value) apply_setting(key, value);
+            }
+        }
+
+        line = strtok_r(NULL, "\n", &saveptr);
+    }
+    free(text);
+    apply_frame_limit_setting();
+    apply_borderless_acres_setting();
+
+    printf("[Settings] Loaded %s from server: %dx%d fullscreen=%d vsync=%d max_fps=%d msaa=%d preload_textures=%d borderless_acres=%d\n",
+           SETTINGS_FILE, g_pc_settings.window_width, g_pc_settings.window_height,
+           g_pc_settings.fullscreen, g_pc_settings.vsync, g_pc_settings.max_fps, g_pc_settings.msaa,
+           g_pc_settings.preload_textures, g_pc_settings.borderless_acres);
+#else
     FILE* f = fopen(SETTINGS_FILE, "r");
     if (!f) {
         write_defaults(SETTINGS_FILE);
@@ -394,4 +517,5 @@ void pc_settings_load(void) {
            SETTINGS_FILE, g_pc_settings.window_width, g_pc_settings.window_height,
            g_pc_settings.fullscreen, g_pc_settings.vsync, g_pc_settings.max_fps, g_pc_settings.msaa,
            g_pc_settings.preload_textures, g_pc_settings.borderless_acres);
+#endif
 }

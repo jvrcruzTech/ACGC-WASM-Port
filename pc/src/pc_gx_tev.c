@@ -6,30 +6,33 @@
 
 int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
 
-/* --- file I/O --- */
+/* --- shader source loading --- */
 
-static char* load_text_file(const char* path) {
 #ifdef __EMSCRIPTEN__
-    const unsigned char* data = NULL;
-    unsigned int len = 0;
-
-    if (!strcmp(path, "default.vert") || !strcmp(path, "shaders/default.vert")) {
-        data = pc_web_default_vert_shader;
-        len = pc_web_default_vert_shader_len;
-    } else if (!strcmp(path, "default.frag") || !strcmp(path, "shaders/default.frag")) {
-        data = pc_web_default_frag_shader;
-        len = pc_web_default_frag_shader_len;
-    }
-
+static char* copy_shader_bytes(const unsigned char* data, unsigned int len) {
     if (!data || len == 0) return NULL;
-
     char* buf = (char*)malloc((size_t)len + 1);
     if (!buf) return NULL;
     memcpy(buf, data, (size_t)len);
     buf[len] = '\0';
-    printf("[PC/TEV] Loaded embedded web shader: %s (%u bytes)\n", path, len);
     return buf;
+}
+
+static void preload_default_shaders(char** vs_src, char** fs_src) {
+    *vs_src = copy_shader_bytes(pc_web_default_vert_shader, pc_web_default_vert_shader_len);
+    *fs_src = copy_shader_bytes(pc_web_default_frag_shader, pc_web_default_frag_shader_len);
+
+    if (*vs_src) {
+        printf("[PC/TEV] Preloaded embedded web shader: default.vert (%u bytes)\n",
+               pc_web_default_vert_shader_len);
+    }
+    if (*fs_src) {
+        printf("[PC/TEV] Preloaded embedded web shader: default.frag (%u bytes)\n",
+               pc_web_default_frag_shader_len);
+    }
+}
 #else
+static char* load_shader_file(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) return NULL;
 
@@ -50,33 +53,42 @@ static char* load_text_file(const char* path) {
     }
     buf[read] = '\0';
     return buf;
-#endif
 }
 
-static char* load_shader(const char* filename) {
+static char* load_native_shader(const char* filename) {
     char path[512];
     snprintf(path, sizeof(path), "shaders/%s", filename);
-    char* src = load_text_file(path);
+    char* src = load_shader_file(path);
     if (src) {
-#ifdef __EMSCRIPTEN__
-        if (strncmp(src, "#version 330 core", 17) == 0) {
-            const char* web_version = "#version 300 es\nprecision highp float;\nprecision highp int;";
-            size_t web_len = strlen(web_version);
-            size_t old_len = strlen("#version 330 core");
-            size_t tail_len = strlen(src + old_len);
-            char* web_src = (char*)malloc(web_len + tail_len + 1);
-            if (web_src) {
-                memcpy(web_src, web_version, web_len);
-                memcpy(web_src + web_len, src + old_len, tail_len + 1);
-                free(src);
-                src = web_src;
-            }
-        }
-#endif
         printf("[PC/TEV] Loaded shader: %s\n", path);
     } else {
         fprintf(stderr, "FATAL: Could not load shader: %s\n", path);
     }
+    return src;
+}
+
+static void preload_default_shaders(char** vs_src, char** fs_src) {
+    *vs_src = load_native_shader("default.vert");
+    *fs_src = load_native_shader("default.frag");
+}
+#endif
+
+static char* rewrite_shader_for_web(char* src) {
+#ifdef __EMSCRIPTEN__
+    if (src && strncmp(src, "#version 330 core", 17) == 0) {
+        const char* web_version = "#version 300 es\nprecision highp float;\nprecision highp int;";
+        size_t web_len = strlen(web_version);
+        size_t old_len = strlen("#version 330 core");
+        size_t tail_len = strlen(src + old_len);
+        char* web_src = (char*)malloc(web_len + tail_len + 1);
+        if (web_src) {
+            memcpy(web_src, web_version, web_len);
+            memcpy(web_src + web_len, src + old_len, tail_len + 1);
+            free(src);
+            return web_src;
+        }
+    }
+#endif
     return src;
 }
 
@@ -602,13 +614,20 @@ static void pc_gx_tev_precompile_cached(void) {
 /* --- init / shutdown --- */
 
 void pc_gx_tev_init(void) {
-    char* vs_src = load_shader("default.vert");
-    char* fs_src = load_shader("default.frag");
+    char* vs_src = NULL;
+    char* fs_src = NULL;
+    preload_default_shaders(&vs_src, &fs_src);
+    vs_src = rewrite_shader_for_web(vs_src);
+    fs_src = rewrite_shader_for_web(fs_src);
 
     if (!vs_src || !fs_src) {
+#ifdef __EMSCRIPTEN__
+        fprintf(stderr, "FATAL: Embedded web shaders are missing from memory.\n");
+#else
         fprintf(stderr, "FATAL: Shader files missing from shaders/ directory.\n"
                         "Expected: shaders/default.vert and shaders/default.frag\n"
                         "Make sure shader files are next to the executable.\n");
+#endif
         free(vs_src);
         free(fs_src);
         exit(1);

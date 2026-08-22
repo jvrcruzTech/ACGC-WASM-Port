@@ -1,5 +1,8 @@
 #include "pc_keybindings.h"
 #include "pc_platform.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 static const PCKeybindings s_kb_defaults = {
     /* buttons */
@@ -52,6 +55,39 @@ PCKeybindings g_pc_keybindings;
 PCPadBindings g_pc_padbindings;
 
 static const char* KEYBINDINGS_FILE = "keybindings.ini";
+
+#ifdef __EMSCRIPTEN__
+EM_JS(char*, pc_web_keybindings_get_text_js, (const char* key_ptr), {
+    const key = UTF8ToString(key_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
+    xhr.responseType = "arraybuffer";
+    xhr.withCredentials = true;
+    xhr.send();
+    if (xhr.status === 404) return 0;
+    if (xhr.status !== 200 || !xhr.response) return 0;
+    const text = new TextDecoder().decode(new Uint8Array(xhr.response));
+    const len = lengthBytesUTF8(text) + 1;
+    const ptr = _malloc(len);
+    stringToUTF8(text, ptr, len);
+    return ptr;
+});
+
+EM_JS(void, pc_web_keybindings_put_text_js, (const char* key_ptr, const char* text_ptr), {
+    const key = UTF8ToString(key_ptr);
+    const text = UTF8ToString(text_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.send(new TextEncoder().encode(text));
+    if (xhr.status < 200 || xhr.status >= 300) {
+        console.error("[Keybindings] Failed to save " + key + " to server: " + xhr.status);
+    }
+});
+#endif
 
 /* mapping table: ini key name -> offset into PCKeybindings */
 typedef struct {
@@ -258,6 +294,46 @@ void pc_keybindings_reset_defaults(void) {
 }
 
 void pc_keybindings_save(void) {
+#ifdef __EMSCRIPTEN__
+    char text[4096];
+    int off = 0;
+    off += snprintf(text + off, sizeof(text) - (size_t)off,
+        "[Keyboard]\n"
+        "# Key names use SDL2 scancode names.\n"
+        "# Common names: Space, Left Shift, Right Shift, Left Ctrl, Right Ctrl,\n"
+        "#   Left Alt, Right Alt, Return, Escape, Tab, Backspace, Delete,\n"
+        "#   A-Z, 0-9, F1-F12, Up, Down, Left, Right, etc.\n"
+        "# Mouse buttons: Mouse1 (left), Mouse2 (right), Mouse3 (middle)\n"
+        "# For the full list, search the SDL2 scancode name table.\n\n"
+        "# Buttons\n");
+
+    for (int i = 0; i < (int)NUM_ENTRIES && off < (int)sizeof(text); i++) {
+        PCInputCode code = *(PCInputCode*)((char*)&g_pc_keybindings + s_entries[i].offset);
+        off += snprintf(text + off, sizeof(text) - (size_t)off, "%s = %s\n",
+                        s_entries[i].ini_key, pc_input_code_name(code));
+        if (i == 7)  off += snprintf(text + off, sizeof(text) - (size_t)off, "\n# Main Stick\n");
+        if (i == 11) off += snprintf(text + off, sizeof(text) - (size_t)off, "\n# C-Stick (Camera)\n");
+        if (i == 15) off += snprintf(text + off, sizeof(text) - (size_t)off, "\n# D-Pad\n");
+    }
+
+    off += snprintf(text + off, sizeof(text) - (size_t)off,
+        "\n[Gamepad]\n"
+        "# SDL2 game controller names: a, b, x, y, start, leftshoulder,\n"
+        "#   rightshoulder, lefttrigger, righttrigger, leftstick, rightstick,\n"
+        "#   dpup, dpdown, dpleft, dpright. Use 'none' to unbind.\n"
+        "# Sticks are fixed: left stick = movement, right stick = C-stick.\n"
+        "# The Back/Select button is reserved: it opens the pause menu.\n");
+
+    for (int i = 0; i < (int)NUM_PAD_ENTRIES && off < (int)sizeof(text); i++) {
+        PCPadCode code = *(PCPadCode*)((char*)&g_pc_padbindings + s_pad_entries[i].offset);
+        off += snprintf(text + off, sizeof(text) - (size_t)off, "%s = %s\n",
+                        s_pad_entries[i].ini_key, pad_code_ini_name(code));
+    }
+
+    text[sizeof(text) - 1] = '\0';
+    pc_web_keybindings_put_text_js(KEYBINDINGS_FILE, text);
+    printf("[Keybindings] Saved %s to server\n", KEYBINDINGS_FILE);
+#else
     FILE* f = fopen(KEYBINDINGS_FILE, "w");
     if (!f) {
         printf("[Keybindings] Failed to write %s\n", KEYBINDINGS_FILE);
@@ -298,11 +374,43 @@ void pc_keybindings_save(void) {
 
     fclose(f);
     printf("[Keybindings] Saved %s\n", KEYBINDINGS_FILE);
+#endif
 }
 
 void pc_keybindings_load(void) {
     pc_keybindings_reset_defaults();
 
+#ifdef __EMSCRIPTEN__
+    char* text = pc_web_keybindings_get_text_js(KEYBINDINGS_FILE);
+    if (!text || text[0] == '\0') {
+        free(text);
+        pc_keybindings_save();
+        text = pc_web_keybindings_get_text_js(KEYBINDINGS_FILE);
+        printf("[Keybindings] Created default %s on server\n", KEYBINDINGS_FILE);
+    }
+
+    char* saveptr = NULL;
+    char* line = strtok_r(text, "\n", &saveptr);
+    while (line) {
+        const char* p = skip_ws(line);
+
+        if (*p != '#' && *p != ';' && *p != '\0' && *p != '\n' && *p != '[') {
+            char* eq = strchr(line, '=');
+            if (eq) {
+                *eq = '\0';
+                char* key = (char*)skip_ws(line);
+                trim_end(key);
+                char* value = (char*)skip_ws(eq + 1);
+                trim_end(value);
+                if (*key && *value) apply_keybind(key, value);
+            }
+        }
+
+        line = strtok_r(NULL, "\n", &saveptr);
+    }
+    free(text);
+    printf("[Keybindings] Loaded %s from server\n", KEYBINDINGS_FILE);
+#else
     FILE* f = fopen(KEYBINDINGS_FILE, "r");
     if (!f) {
         pc_keybindings_save();
@@ -331,4 +439,5 @@ void pc_keybindings_load(void) {
     }
     fclose(f);
     printf("[Keybindings] Loaded %s\n", KEYBINDINGS_FILE);
+#endif
 }

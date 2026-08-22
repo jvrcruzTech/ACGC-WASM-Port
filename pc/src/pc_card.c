@@ -127,8 +127,8 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
-    xhr.overrideMimeType("text/plain; charset=x-user-defined");
+    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
+    xhr.responseType = "arraybuffer";
     xhr.withCredentials = true;
     try {
         xhr.send();
@@ -141,16 +141,14 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
         console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    const text = xhr.responseText || "";
-    if (text.length > capacity) {
-        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " too large: " + text.length + " > " + capacity);
+    const bytes = new Uint8Array(xhr.response || new ArrayBuffer(0));
+    if (bytes.length > capacity) {
+        console.error("[Animal Crossing card] fetch memory_card too large: " + bytes.length + " > " + capacity);
         return -1;
     }
-    for (let i = 0; i < text.length; i++) {
-        HEAPU8[dest_ptr + i] = text.charCodeAt(i) & 0xff;
-    }
-    console.log("[Animal Crossing card] loaded " + slot + "/" + filename + " (" + text.length + " bytes)");
-    return text.length;
+    HEAPU8.set(bytes, dest_ptr);
+    console.log("[Animal Crossing card] loaded memory_card for " + gameId + " (" + bytes.length + " bytes)");
+    return bytes.length;
 });
 
 EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
@@ -159,7 +157,7 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
     const gameId = Module.acGameId || "animal_crossing";
     const data = HEAPU8.slice(data_ptr, data_ptr + length);
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
+    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
     xhr.withCredentials = true;
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     try {
@@ -172,7 +170,7 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
         console.error("[Animal Crossing card] store " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    console.log("[Animal Crossing card] stored " + slot + "/" + filename + " (" + length + " bytes)");
+    console.log("[Animal Crossing card] stored memory_card for " + gameId + " (" + length + " bytes)");
     return 1;
 });
 
@@ -181,10 +179,11 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
-    xhr.open("DELETE", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
+    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
     xhr.withCredentials = true;
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
     try {
-        xhr.send();
+        xhr.send(new Uint8Array(0));
     } catch (err) {
         console.error("[Animal Crossing card] delete failed", err);
         return 0;
@@ -193,7 +192,7 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
         console.error("[Animal Crossing card] delete " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    console.log("[Animal Crossing card] deleted " + slot + "/" + filename);
+    console.log("[Animal Crossing card] cleared memory_card for " + gameId);
     return 1;
 });
 
