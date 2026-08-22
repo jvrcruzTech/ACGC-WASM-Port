@@ -2,6 +2,7 @@
 
 #include "dolphin/os.h"
 #include "dolphin/os/OSFastCast.h"
+#include "dolphin/ai.h"
 #include "jaudio_NES/dspproc.h"
 #include "jaudio_NES/cpubuf.h"
 #include "jaudio_NES/dummyprobe.h"
