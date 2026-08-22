@@ -449,6 +449,7 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sINVOKE_RUN=0
         -sEXPORTED_RUNTIME_METHODS=FS,callMain
         -sFORCE_FILESYSTEM=1
+        --profiling-funcs
         -lidbfs.js
     )
 elseif(TARGET SDL2::SDL2)

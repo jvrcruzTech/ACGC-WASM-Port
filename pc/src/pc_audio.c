@@ -32,6 +32,7 @@ static AIDMACallback ai_dma_callback = NULL;
 static u32 ai_dsp_sample_rate = PC_AUDIO_SAMPLE_RATE;
 
 /* --- Audio producer thread --- */
+#ifndef __EMSCRIPTEN__
 static SDL_Thread* audio_producer_thread = NULL;
 static SDL_atomic_t audio_thread_running;
 
@@ -47,6 +48,7 @@ static int pc_audio_producer_func(void* data) {
     }
     return 0;
 }
+#endif
 
 void pc_audio_start_producer_thread(void) {
 #ifdef __EMSCRIPTEN__
@@ -100,6 +102,10 @@ static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
 
 void AIInit(u8* stack) {
     (void)stack;
+#ifdef __EMSCRIPTEN__
+    printf("[AUDIO] SDL audio device disabled on web; running silent\n");
+    return;
+#endif
     if (audio_device != 0) return;
 
     SDL_AudioSpec want, have;
