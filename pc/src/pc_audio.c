@@ -36,7 +36,6 @@ static SDL_AudioDeviceID audio_device = 0;
 static int audio_device_requested = 0;
 static int audio_device_failed = 0;
 static int audio_dma_running = 0;
-static int web_audio_open = 0;
 #endif
 
 typedef void (*AIDMACallback)(void);
@@ -45,116 +44,9 @@ static u32 ai_dsp_sample_rate = PC_AUDIO_SAMPLE_RATE;
 
 static void pc_audio_callback(void* userdata, Uint8* stream, int len);
 
-#ifdef __EMSCRIPTEN__
-EM_JS(int, pc_web_audio_init_js, (int sample_rate), {
-    if (Module.acWebAudioReady) return 1;
-    if (Module.acWebAudioOpening) return 1;
-
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) {
-        console.error("[AUDIO] Web Audio is not available in this browser");
-        return 0;
-    }
-
-    Module.acWebAudioOpening = true;
-    const context = Module.acWebAudioContext || Module.SDL2?.audioContext || new AudioContextCtor({ sampleRate: sample_rate });
-    if (!context.audioWorklet) {
-        Module.acWebAudioOpening = false;
-        console.error("[AUDIO] AudioWorklet is not available in this browser");
-        return 0;
-    }
-    Module.acWebAudioContext = context;
-
-    const processor = `
-class ACGCAudioProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.queue = [];
-    this.offset = 0;
-    this.port.onmessage = (event) => {
-      if (event.data && event.data.type === "samples") {
-        this.queue.push(new Float32Array(event.data.samples));
-      }
-    };
-  }
-  process(inputs, outputs) {
-    const output = outputs[0];
-    const left = output[0];
-    const right = output[1] || output[0];
-    for (let i = 0; i < left.length; i++) {
-      if (!this.queue.length) {
-        left[i] = 0;
-        right[i] = 0;
-        continue;
-      }
-      const samples = this.queue[0];
-      const base = this.offset * 2;
-      left[i] = samples[base] || 0;
-      right[i] = samples[base + 1] || 0;
-      this.offset++;
-      if (this.offset * 2 >= samples.length) {
-        this.queue.shift();
-        this.offset = 0;
-      }
-    }
-    return true;
-  }
-}
-registerProcessor("acgc-audio-processor", ACGCAudioProcessor);
-`;
-    const url = URL.createObjectURL(new Blob([processor], { type: "text/javascript" }));
-    context.audioWorklet.addModule(url).then(() => {
-        URL.revokeObjectURL(url);
-        const node = new AudioWorkletNode(context, "acgc-audio-processor", {
-            numberOfInputs: 0,
-            numberOfOutputs: 1,
-            outputChannelCount: [2]
-        });
-        node.connect(context.destination);
-        Module.acWebAudioNode = node;
-        Module.acWebAudioReady = true;
-        Module.acWebAudioOpening = false;
-        if (context.state === "suspended") context.resume().catch(() => {});
-        console.log("[AUDIO] Opened AudioWorklet output");
-    }).catch((err) => {
-        URL.revokeObjectURL(url);
-        Module.acWebAudioOpening = false;
-        Module.acWebAudioFailed = true;
-        console.error("[AUDIO] Failed to open AudioWorklet output", err);
-    });
-    return 1;
-});
-
-EM_JS(int, pc_web_audio_ready_js, (void), {
-    return Module.acWebAudioReady ? 1 : 0;
-});
-
-EM_JS(void, pc_web_audio_push_js, (unsigned int samples_ptr, unsigned int sample_count), {
-    const node = Module.acWebAudioNode;
-    if (!node || !sample_count) return;
-
-    const input = HEAP16.subarray(samples_ptr >> 1, (samples_ptr >> 1) + sample_count);
-    const output = new Float32Array(sample_count);
-    for (let i = 0; i < sample_count; i++) {
-        output[i] = Math.max(-1, Math.min(1, input[i] / 32768));
-    }
-    node.port.postMessage({ type: "samples", samples: output.buffer }, [output.buffer]);
-});
-#endif
-
 static int pc_audio_open_device(void) {
     if (audio_device != 0) return 1;
 
-#ifdef __EMSCRIPTEN__
-    if (web_audio_open) return 1;
-    web_audio_open = pc_web_audio_init_js(PC_AUDIO_SAMPLE_RATE);
-    if (web_audio_open) {
-        printf("[AUDIO] Opening AudioWorklet output\n");
-        return 1;
-    }
-    printf("[AUDIO] Failed to start AudioWorklet output\n");
-    return 0;
-#else
     SDL_AudioSpec want, have;
     memset(&want, 0, sizeof(want));
     want.freq = PC_AUDIO_SAMPLE_RATE;
@@ -172,7 +64,6 @@ static int pc_audio_open_device(void) {
 
     printf("[AUDIO] Failed to open: %s\n", SDL_GetError());
     return 0;
-#endif
 }
 
 /* --- Audio producer thread --- */
@@ -342,52 +233,19 @@ int pc_audio_get_buffer_fill(void) {
 }
 
 int pc_audio_is_active(void) {
-#ifdef __EMSCRIPTEN__
-    return web_audio_open;
-#else
     return audio_device != 0;
-#endif
 }
 
 #ifdef __EMSCRIPTEN__
-static void pc_audio_web_drain(void) {
-    u32 wp = (u32)SDL_AtomicGet(&ring_write_pos);
-    u32 rp = (u32)SDL_AtomicGet(&ring_read_pos);
-    u32 used = wp - rp;
-
-    if (!pc_web_audio_ready_js() || used == 0) return;
-
-    if (used > RING_BUF_SAMPLES) {
-        rp = wp - RING_BUF_SAMPLES;
-        rp &= ~1u;
-        used = wp - rp;
-    }
-
-    while (used > 0) {
-        u32 start = rp & RING_BUF_MASK;
-        u32 chunk = RING_BUF_SAMPLES - start;
-        if (chunk > used) chunk = used;
-        if (chunk > 2048) chunk = 2048;
-        chunk &= ~1u;
-        if (chunk == 0) break;
-
-        pc_web_audio_push_js((unsigned int)&ring_buffer[start], chunk);
-        rp += chunk;
-        used -= chunk;
-    }
-
-    SDL_AtomicSet(&ring_read_pos, (int)rp);
-}
-
 void pc_audio_web_pump(void) {
     if (audio_device == 0 && audio_device_requested && !audio_device_failed) {
         audio_device_failed = !pc_audio_open_device();
     }
-    if (web_audio_open && audio_dma_running) {
+    if (audio_device != 0 && audio_dma_running) {
+        SDL_PauseAudioDevice(audio_device, 0);
         for (int i = 0; i < AUDIO_PRODUCE_MAX_FRAMES && pc_audio_get_buffer_fill() < AUDIO_PRODUCE_THRESHOLD; i++) {
             pc_audio_process_frame();
         }
-        pc_audio_web_drain();
     }
 }
 #endif
@@ -405,7 +263,4 @@ void pc_audio_shutdown(void) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
     }
-#ifdef __EMSCRIPTEN__
-    web_audio_open = 0;
-#endif
 }
