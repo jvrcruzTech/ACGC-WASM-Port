@@ -1,4 +1,5 @@
 #include "ac_t_hat3.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -41,7 +42,7 @@ static void aTHT3_destruct(ACTOR* actor){
 static void aTHT3_setupAction(ACTOR*actor, int action){
     HAT3_ACTOR* hat = (HAT3_ACTOR*)actor;
     static HAT3_PROC process[] = {
-        (HAT3_PROC)none_proc1,(HAT3_PROC)none_proc1,(HAT3_PROC)none_proc1,aTHT3_destruct,(HAT3_PROC)none_proc1,NULL
+        PC_WASM_NOOP_PROC(HAT3_PROC),PC_WASM_NOOP_PROC(HAT3_PROC),PC_WASM_NOOP_PROC(HAT3_PROC),aTHT3_destruct,PC_WASM_NOOP_PROC(HAT3_PROC),PC_WASM_NULL_NOOP_PROC(HAT3_PROC)
     };
 
     hat->proc = process[action];

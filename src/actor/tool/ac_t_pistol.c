@@ -1,4 +1,5 @@
 #include "ac_t_pistol.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -62,8 +63,8 @@ static void aTPT_destruct(ACTOR* actor){
 static void aTPT_setupAction(ACTOR* actor, int idx){
     PISTOL_ACTOR* pistol = (PISTOL_ACTOR*)actor;
 
-    static PISTOL_PROC process[] = {(PISTOL_PROC)none_proc1, aTPT_takeout,aTPT_putaway,aTPT_destruct,
-    (PISTOL_PROC)none_proc1,NULL};
+    static PISTOL_PROC process[] = {PC_WASM_NOOP_PROC(PISTOL_PROC), aTPT_takeout,aTPT_putaway,aTPT_destruct,
+    PC_WASM_NOOP_PROC(PISTOL_PROC),PC_WASM_NULL_NOOP_PROC(PISTOL_PROC)};
     static f32 start_scale[] = {0.0f, 0.0f, 1.0f,1.0f,1.0f,0.0f,0.0f};
     f32 scale;
 

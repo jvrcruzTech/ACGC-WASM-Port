@@ -1,4 +1,5 @@
 #include "ac_t_hasu1.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -41,7 +42,7 @@ static void aTHS1_destruct(ACTOR* actor){
 static void aTHS1_setupAction(ACTOR*actor, int action){
     HASU1_ACTOR* hasu = (HASU1_ACTOR*)actor;
     static HASU1_PROC process[] = {
-        (HASU1_PROC)none_proc1,(HASU1_PROC)none_proc1,(HASU1_PROC)none_proc1,aTHS1_destruct,(HASU1_PROC)none_proc1,NULL
+        PC_WASM_NOOP_PROC(HASU1_PROC),PC_WASM_NOOP_PROC(HASU1_PROC),PC_WASM_NOOP_PROC(HASU1_PROC),aTHS1_destruct,PC_WASM_NOOP_PROC(HASU1_PROC),PC_WASM_NULL_NOOP_PROC(HASU1_PROC)
     };
 
     hasu->proc = process[action];

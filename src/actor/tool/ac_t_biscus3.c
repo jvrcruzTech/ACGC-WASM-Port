@@ -1,4 +1,5 @@
 #include "ac_t_biscus3.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -41,7 +42,7 @@ static void aTB3_destruct(ACTOR* actor){
 static void aTB3_setupAction(ACTOR*actor, int action){
     BISCUS3_ACTOR* biscus = (BISCUS3_ACTOR*)actor;
     static BISCUS3_PROC process[] = {
-        (BISCUS3_PROC)none_proc1,(BISCUS3_PROC)none_proc1,(BISCUS3_PROC)none_proc1,aTB3_destruct,(BISCUS3_PROC)none_proc1,NULL
+        PC_WASM_NOOP_PROC(BISCUS3_PROC),PC_WASM_NOOP_PROC(BISCUS3_PROC),PC_WASM_NOOP_PROC(BISCUS3_PROC),aTB3_destruct,PC_WASM_NOOP_PROC(BISCUS3_PROC),PC_WASM_NULL_NOOP_PROC(BISCUS3_PROC)
     };
 
     biscus->proc = process[action];

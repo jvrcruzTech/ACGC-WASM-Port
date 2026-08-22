@@ -1,4 +1,5 @@
 #include "ac_t_zinnia1.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -37,7 +38,7 @@ static void aTZN1_destruct(ACTOR* actor){
 static void aTZN1_setupAction(ACTOR* actor, int action){
     ZINNIA1_ACTOR* zinnia1 = (ZINNIA1_ACTOR*)actor;
     static ZINNIA1_PROC process[] = {
-        (ZINNIA1_PROC)none_proc1, (ZINNIA1_PROC)none_proc1, (ZINNIA1_PROC)none_proc1, aTZN1_destruct,(ZINNIA1_PROC)none_proc1, NULL
+        PC_WASM_NOOP_PROC(ZINNIA1_PROC), PC_WASM_NOOP_PROC(ZINNIA1_PROC), PC_WASM_NOOP_PROC(ZINNIA1_PROC), aTZN1_destruct,PC_WASM_NOOP_PROC(ZINNIA1_PROC), PC_WASM_NULL_NOOP_PROC(ZINNIA1_PROC)
     };
     
     zinnia1->proc = process[action];

@@ -1,4 +1,5 @@
 #include "ac_t_cracker.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -62,8 +63,8 @@ static void aTCR_destruct(ACTOR* actor){
 static void aTCR_setupAction(ACTOR* actor, int idx){
     CRACKER_ACTOR* cracker = (CRACKER_ACTOR*)actor;
 
-    static CRACKER_PROC process[] = {(CRACKER_PROC)none_proc1, aTCR_takeout,aTCR_putaway,aTCR_destruct,
-    (CRACKER_PROC)none_proc1,NULL};
+    static CRACKER_PROC process[] = {PC_WASM_NOOP_PROC(CRACKER_PROC), aTCR_takeout,aTCR_putaway,aTCR_destruct,
+    PC_WASM_NOOP_PROC(CRACKER_PROC),PC_WASM_NULL_NOOP_PROC(CRACKER_PROC)};
     static f32 start_scale[] = {0.0f, 0.0f, 1.0f,1.0f,1.0f,0.0f,0.0f};
     f32 scale;
 

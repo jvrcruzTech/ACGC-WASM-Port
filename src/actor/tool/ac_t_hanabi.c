@@ -1,4 +1,5 @@
 #include "ac_t_hanabi.h"
+#include "pc_wasm_noops.h"
 
 #include "m_rcp.h"
 #include "m_name_table.h"
@@ -62,8 +63,8 @@ static void aTHB_destruct(ACTOR* actor) {
 static void aTHB_setupAction(ACTOR* actor, int idx) {
     HANABI_ACTOR* hanabi = (HANABI_ACTOR*)actor;
 
-    static HANABI_PROC process[] = { (HANABI_PROC)none_proc1, aTHB_takeout, aTHB_putaway, aTHB_destruct,
-                                     (HANABI_PROC)none_proc1, NULL };
+    static HANABI_PROC process[] = { PC_WASM_NOOP_PROC(HANABI_PROC), aTHB_takeout, aTHB_putaway, aTHB_destruct,
+                                     PC_WASM_NOOP_PROC(HANABI_PROC), PC_WASM_NULL_NOOP_PROC(HANABI_PROC) };
     static f32 start_scale[] = { 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f };
     f32 scale;
 

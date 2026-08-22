@@ -1,4 +1,5 @@
 #include "ac_t_rei2.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -37,7 +38,7 @@ static void aTRI2_destruct(ACTOR* actor){
 static void aTRI2_setupAction(ACTOR* actor, int action){
     REI2_ACTOR* rei2 = (REI2_ACTOR*)actor;
     static REI2_PROC process[] = {
-        (REI2_PROC)none_proc1, (REI2_PROC)none_proc1, (REI2_PROC)none_proc1, aTRI2_destruct,(REI2_PROC)none_proc1, NULL
+        PC_WASM_NOOP_PROC(REI2_PROC), PC_WASM_NOOP_PROC(REI2_PROC), PC_WASM_NOOP_PROC(REI2_PROC), aTRI2_destruct,PC_WASM_NOOP_PROC(REI2_PROC), PC_WASM_NULL_NOOP_PROC(REI2_PROC)
     };
     
     rei2->proc = process[action];

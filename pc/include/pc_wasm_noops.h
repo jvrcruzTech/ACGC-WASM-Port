@@ -16,4 +16,12 @@ void pc_noop_npc_sub(NPC_ACTOR* nactorx, GAME_PLAY* play);
 void pc_noop_npc_schedule(NPC_ACTOR* nactorx, GAME_PLAY* play, int type);
 void pc_noop_ptr_play(void* actor, GAME_PLAY* play);
 
+#ifdef __EMSCRIPTEN__
+#define PC_WASM_NOOP_PROC(type) ((type)pc_noop_actor)
+#define PC_WASM_NULL_NOOP_PROC(type) ((type)pc_noop_actor)
+#else
+#define PC_WASM_NOOP_PROC(type) ((type)none_proc1)
+#define PC_WASM_NULL_NOOP_PROC(type) NULL
+#endif
+
 #endif

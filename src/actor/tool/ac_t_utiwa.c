@@ -1,4 +1,5 @@
 #include "ac_t_utiwa.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -55,8 +56,8 @@ static void aTUT_destruct(ACTOR* actor) {
 }
 
 static void aTUT_setupAction(ACTOR* actor, int idx) {
-    static UTIWA_PROC process[] = {(UTIWA_PROC)none_proc1, aTUT_takeout, aTUT_putaway, aTUT_destruct,
-    (UTIWA_PROC)none_proc1, NULL};
+    static UTIWA_PROC process[] = {PC_WASM_NOOP_PROC(UTIWA_PROC), aTUT_takeout, aTUT_putaway, aTUT_destruct,
+    PC_WASM_NOOP_PROC(UTIWA_PROC), PC_WASM_NULL_NOOP_PROC(UTIWA_PROC)};
 
     static f32 start_scale[] = {0.0f, 0.0f, 1.0f,1.0f,1.0f,0.0f,0.0f};
 

@@ -1,4 +1,5 @@
 #include "ac_t_tumbler.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -50,8 +51,8 @@ static void aTTB_destruct(TOOL_TUMBLER_ACTOR* tumbler_actor) {
 }
 
 static void aTTB_setupAction(TOOL_TUMBLER_ACTOR* tumbler_actor, int action) {
-    static aTTB_ACTION_PROC process[] = { (aTTB_ACTION_PROC)&none_proc1, &aTTB_takeout, &aTTB_putaway, &aTTB_destruct,
-                                          (aTTB_ACTION_PROC)&none_proc1, NULL };
+    static aTTB_ACTION_PROC process[] = { PC_WASM_NOOP_PROC(aTTB_ACTION_PROC), &aTTB_takeout, &aTTB_putaway, &aTTB_destruct,
+                                          PC_WASM_NOOP_PROC(aTTB_ACTION_PROC), PC_WASM_NULL_NOOP_PROC(aTTB_ACTION_PROC) };
 
     static f32 start_scale[] = { 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f };
 

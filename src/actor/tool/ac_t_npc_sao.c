@@ -1,4 +1,5 @@
 #include "ac_t_npc_sao.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -31,9 +32,9 @@ static void aTNS_destruct(NPC_SAO_TOOL_ACTOR* npc_sao) {
 static void aTNS_setupAction(ACTOR* actorx, u8 action) {
     NPC_SAO_TOOL_ACTOR* npc_sao = (NPC_SAO_TOOL_ACTOR*)actorx;
 
-    static aTNS_ACTION_PROC process[] = { (aTNS_ACTION_PROC)&none_proc1, (aTNS_ACTION_PROC)&none_proc1,
-                                          (aTNS_ACTION_PROC)&none_proc1, &aTNS_destruct,
-                                          (aTNS_ACTION_PROC)&none_proc1, NULL };
+    static aTNS_ACTION_PROC process[] = { PC_WASM_NOOP_PROC(aTNS_ACTION_PROC), PC_WASM_NOOP_PROC(aTNS_ACTION_PROC),
+                                          PC_WASM_NOOP_PROC(aTNS_ACTION_PROC), &aTNS_destruct,
+                                          PC_WASM_NOOP_PROC(aTNS_ACTION_PROC), PC_WASM_NULL_NOOP_PROC(aTNS_ACTION_PROC) };
 
     npc_sao->action_proc = process[action];
     npc_sao->action = action;

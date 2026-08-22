@@ -5,6 +5,9 @@
 #include "m_lib.h"
 #include "m_rcp.h"
 #include "m_common_data.h"
+#ifdef __EMSCRIPTEN__
+#include "pc_wasm_noops.h"
+#endif
 
 enum {
     aTUMB_ACTION_TAKEOUT_BEFORE,
@@ -228,8 +231,13 @@ static void aTUMB_destruct(ACTOR* actor) {
 }
 
 void aTUMB_setupAction(UMBRELLA_ACTOR* umbrella, int action) {
-    static UMBRELLA_PROC process[] = { aTUMB_takeout_before, (UMBRELLA_PROC)none_proc1, (UMBRELLA_PROC)none_proc1,
-                                       aTUMB_destruct,       (UMBRELLA_PROC)none_proc1, NULL };
+#ifdef __EMSCRIPTEN__
+    static UMBRELLA_PROC process[] = { aTUMB_takeout_before, pc_noop_actor, pc_noop_actor,
+                                       aTUMB_destruct,       pc_noop_actor, pc_noop_actor };
+#else
+    static UMBRELLA_PROC process[] = { aTUMB_takeout_before, PC_WASM_NOOP_PROC(UMBRELLA_PROC), PC_WASM_NOOP_PROC(UMBRELLA_PROC),
+                                       aTUMB_destruct,       PC_WASM_NOOP_PROC(UMBRELLA_PROC), PC_WASM_NULL_NOOP_PROC(UMBRELLA_PROC) };
+#endif
 
     f32 frame;
 

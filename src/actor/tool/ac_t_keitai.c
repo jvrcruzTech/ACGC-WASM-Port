@@ -1,4 +1,5 @@
 #include "ac_t_keitai.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -102,7 +103,7 @@ static void aTKT_s_takeout(ACTOR* actor) {
 
 static void aTKT_setupAction(KEITAI_ACTOR* keitai, int action) {
     static KEITAI_PROC process[] = {
-        (KEITAI_PROC)none_proc1, aTKT_takeout, aTKT_putaway, aTKT_destruct, aTKT_s_takeout, NULL,
+        PC_WASM_NOOP_PROC(KEITAI_PROC), aTKT_takeout, aTKT_putaway, aTKT_destruct, aTKT_s_takeout, PC_WASM_NULL_NOOP_PROC(KEITAI_PROC),
     };
 
     KEITAI_ACTION_ANIM* action_anim;

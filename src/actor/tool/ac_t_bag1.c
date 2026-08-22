@@ -1,4 +1,5 @@
 #include "ac_t_bag1.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -41,7 +42,7 @@ static void aTBG1_destruct(ACTOR* actor){
 static void aTBG1_setupAction(ACTOR*actor, int action){
     BAG1_ACTOR* bag = (BAG1_ACTOR*)actor;
     static BAG1_PROC process[] = {
-        (BAG1_PROC)none_proc1,(BAG1_PROC)none_proc1,(BAG1_PROC)none_proc1,aTBG1_destruct,(BAG1_PROC)none_proc1,NULL
+        PC_WASM_NOOP_PROC(BAG1_PROC),PC_WASM_NOOP_PROC(BAG1_PROC),PC_WASM_NOOP_PROC(BAG1_PROC),aTBG1_destruct,PC_WASM_NOOP_PROC(BAG1_PROC),PC_WASM_NULL_NOOP_PROC(BAG1_PROC)
     };
 
     bag->proc = process[action];

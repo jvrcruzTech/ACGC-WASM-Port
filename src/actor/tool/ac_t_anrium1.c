@@ -1,4 +1,5 @@
 #include "ac_t_anrium1.h"
+#include "pc_wasm_noops.h"
 
 #include "m_name_table.h"
 #include "sys_matrix.h"
@@ -41,7 +42,7 @@ static void aTA1_destruct(ACTOR* actor){
 static void aTA1_setupAction(ACTOR*actor, int action){
     ANRIUM1_ACTOR* anrium = (ANRIUM1_ACTOR*)actor;
     static ANRIUM1_PROC process[] = {
-        (ANRIUM1_PROC)none_proc1,(ANRIUM1_PROC)none_proc1,(ANRIUM1_PROC)none_proc1,aTA1_destruct,(ANRIUM1_PROC)none_proc1,NULL
+        PC_WASM_NOOP_PROC(ANRIUM1_PROC),PC_WASM_NOOP_PROC(ANRIUM1_PROC),PC_WASM_NOOP_PROC(ANRIUM1_PROC),aTA1_destruct,PC_WASM_NOOP_PROC(ANRIUM1_PROC),PC_WASM_NULL_NOOP_PROC(ANRIUM1_PROC)
     };
 
     anrium->proc = process[action];
