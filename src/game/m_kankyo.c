@@ -925,6 +925,10 @@ static f32 mEnv_DiffuseLightEffectRate() {
 
 #include "../src/game/m_kankyo_weather.c_inc"
 
+static void mEnv_nature_noop(ACTOR* actor) {
+    (void)actor;
+}
+
 extern void mEnv_regist_nature(Kankyo* kankyo, NATURE_PROC nature_proc, void* arg) {
     kankyo->nature.proc = nature_proc;
     kankyo->nature.arg = arg;
@@ -934,7 +938,7 @@ extern int mEnv_unregist_nature(Kankyo* kankyo, NATURE_PROC nature_proc) {
     int res = FALSE;
 
     if (nature_proc == kankyo->nature.proc) {
-        mEnv_regist_nature(kankyo, (NATURE_PROC)&none_proc1, NULL);
+        mEnv_regist_nature(kankyo, &mEnv_nature_noop, NULL);
         res = TRUE;
     }
 
@@ -1371,7 +1375,7 @@ extern void Global_kankyo_ct(GAME* game, Kankyo* kankyo) {
     mEnv_set_time(kankyo);
     kankyo->countdown_timer = 0xFF;
     mEnv_RoomTypeLightSet(game, kankyo);
-    mEnv_regist_nature(kankyo, (NATURE_PROC)none_proc1, NULL);
+    mEnv_regist_nature(kankyo, &mEnv_nature_noop, NULL);
     mEnv_MakeWindowLightAlpha(FALSE);
     mEnv_InitWind();
     l_mEnv_electric_light.switch_status =

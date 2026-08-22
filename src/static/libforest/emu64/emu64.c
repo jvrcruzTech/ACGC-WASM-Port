@@ -4177,7 +4177,9 @@ void emu64::dl_G_SETSCISSOR() {
 
     /* NOTE: fractional scissor components are ignored */
     if (this->disable_polygons == false) {
-        GXSetScissor(scissor->x0, scissor->y0, scissor->x1, scissor->y1);
+        u32 width = scissor->x1 > scissor->x0 ? scissor->x1 - scissor->x0 : 0;
+        u32 height = scissor->y1 > scissor->y0 ? scissor->y1 - scissor->y0 : 0;
+        GXSetScissor(scissor->x0, scissor->y0, width, height);
     }
 }
 
