@@ -4,11 +4,15 @@
 #include <emscripten.h>
 EM_JS(int, pc_web_load_extra_text_file_js, (const char* path_ptr), {
     const path = UTF8ToString(path_ptr);
-    const files = Module.acExtraFiles || {};
+    const root = typeof globalThis !== "undefined" ? globalThis : window;
+    const files = (root && root.__ACGC_EXTRA_FILES__) || Module.acExtraFiles || {};
     let shortPath = path;
     if (shortPath.startsWith("shaders/")) shortPath = shortPath.slice(8);
     const bytes = files[path] || files[shortPath];
-    if (!bytes) return 0;
+    if (!bytes) {
+        console.error("[Animal Crossing shader] missing " + path + "; available keys=" + Object.keys(files).join(","));
+        return 0;
+    }
     const ptr = _malloc(bytes.length + 1);
     HEAPU8.set(bytes, ptr);
     HEAPU8[ptr + bytes.length] = 0;
