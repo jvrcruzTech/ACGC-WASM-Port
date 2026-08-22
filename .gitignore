@@ -22,8 +22,12 @@ orig/*/*
 build/
 build32/
 pc/build-wasm*/
+pc/include/generated/
 .ninja_*
 build.ninja
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
 
 # decompctx output
 ctx.*
@@ -37,6 +41,7 @@ compile_commands.json
 /*.txt
 !requirements.txt
 *.exe
+*.py[cod]
 
 # For saving work files into (like IDB)
 temp/
