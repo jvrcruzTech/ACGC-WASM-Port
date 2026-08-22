@@ -119,22 +119,37 @@ void JFWSystem::firstInit() {
 void JFWSystem::init() {
     JUT_ASSERT(sInitCalled == false);
 
+    OSReport("[WEB/BOOT] JFWSystem::init enter\n");
     if (rootHeap == 0)
         firstInit();
 
+    OSReport("[WEB/BOOT] JFWSystem::init after firstInit root=%p system=%p\n", rootHeap, systemHeap);
     sInitCalled = true;
+    OSReport("[WEB/BOOT] JFWSystem::init before JKRAram::create audio=%08x graph=%08x\n",
+             CSetUpParam::aramAudioBufSize, CSetUpParam::aramGraphBufSize);
     JKRAram::create(CSetUpParam::aramAudioBufSize, CSetUpParam::aramGraphBufSize, CSetUpParam::streamPriority,
                     CSetUpParam::decompPriority, CSetUpParam::aPiecePriority);
+    OSReport("[WEB/BOOT] JFWSystem::init after JKRAram::create\n");
 
+    OSReport("[WEB/BOOT] JFWSystem::init before mainThread current=%p\n", OSGetCurrentThread());
     mainThread = new JKRThread(OSGetCurrentThread(), 4);
+    OSReport("[WEB/BOOT] JFWSystem::init after mainThread\n");
     JUTVideo::createManager(CSetUpParam::renderMode);
+    OSReport("[WEB/BOOT] JFWSystem::init after video\n");
     JUTCreateFifo(CSetUpParam::fifoBufSize);
+    OSReport("[WEB/BOOT] JFWSystem::init after fifo\n");
     JUTGamePad::init();
+    OSReport("[WEB/BOOT] JFWSystem::init after gamepad\n");
     JUTDirectPrint* directPrint = JUTDirectPrint::start();
+    OSReport("[WEB/BOOT] JFWSystem::init after directprint\n");
     JUTAssertion::create();
+    OSReport("[WEB/BOOT] JFWSystem::init after assertion\n");
     JUTException::create(directPrint);
+    OSReport("[WEB/BOOT] JFWSystem::init after exception\n");
     systemFont = new JUTResFont(CSetUpParam::systemFontRes, nullptr);
+    OSReport("[WEB/BOOT] JFWSystem::init after font\n");
     debugPrint = JUTDbPrint::start(nullptr, nullptr);
+    OSReport("[WEB/BOOT] JFWSystem::init after dbprint\n");
     debugPrint->changeFont(systemFont);
     systemConsoleManager = JUTConsoleManager::createManager(nullptr);
     systemConsole = JUTConsole::create(60, 200, nullptr);
