@@ -6,6 +6,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <dirent.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/fetch.h>
+#endif
 #include "types.h"
 #include "pc_disc.h"
 
@@ -26,6 +29,10 @@ static u32 le32(const u8* p) {
 
 typedef struct {
     FILE* fp;
+#ifdef __EMSCRIPTEN__
+    char url[512];
+    int is_remote;
+#endif
     int is_ciso;
     u32 block_size;
     int num_blocks;
@@ -51,15 +58,65 @@ static FSTFile g_fst_files[MAX_FST_FILES];
 static int g_fst_file_count = 0;
 
 /* ---- disc I/O ---- */
+#ifdef __EMSCRIPTEN__
+static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
+    char range[64];
+    const char* headers[3];
+    emscripten_fetch_attr_t attr;
+    emscripten_fetch_t* fetch;
+    int ok;
+
+    if (!df->is_remote || size == 0) return 0;
+
+    snprintf(range, sizeof(range), "bytes=%u-%u", offset, offset + size - 1);
+    headers[0] = "Range";
+    headers[1] = range;
+    headers[2] = NULL;
+
+    emscripten_fetch_attr_init(&attr);
+    strcpy(attr.requestMethod, "GET");
+    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | EMSCRIPTEN_FETCH_SYNCHRONOUS | EMSCRIPTEN_FETCH_REPLACE;
+    attr.requestHeaders = headers;
+    attr.withCredentials = 1;
+
+    fetch = emscripten_fetch(&attr, df->url);
+    ok = fetch &&
+         (fetch->status == 206 || fetch->status == 200) &&
+         fetch->data != NULL &&
+         fetch->numBytes >= size;
+    if (ok) memcpy(dest, fetch->data, size);
+    if (fetch) emscripten_fetch_close(fetch);
+    return ok;
+}
+#endif
+
 static int disc_open(DiscFile* df, const char* path) {
     u8 hdr[CISO_HDR_SIZE];
 
     memset(df, 0, sizeof(*df));
+#ifdef __EMSCRIPTEN__
+    if (path[0] == '/') {
+        snprintf(df->url, sizeof(df->url), "%s", path);
+        df->is_remote = 1;
+    } else
+#endif
     df->fp = fopen(path, "rb");
-    if (!df->fp) return 0;
+    if (
+#ifdef __EMSCRIPTEN__
+        !df->is_remote &&
+#endif
+        !df->fp) return 0;
 
     /* try CISO */
-    if (fread(hdr, 1, CISO_HDR_SIZE, df->fp) == CISO_HDR_SIZE &&
+    if (
+#ifdef __EMSCRIPTEN__
+        (df->is_remote ? remote_read(df, 0, hdr, CISO_HDR_SIZE) :
+#endif
+        fread(hdr, 1, CISO_HDR_SIZE, df->fp) == CISO_HDR_SIZE
+#ifdef __EMSCRIPTEN__
+        )
+#endif
+        &&
         le32(hdr) == CISO_MAGIC) {
         df->block_size = le32(hdr + 4);
         if (df->block_size > 0) {
@@ -85,6 +142,11 @@ static void disc_close(DiscFile* df) {
 }
 
 static int disc_read(DiscFile* df, u32 offset, void* dest, u32 size) {
+#ifdef __EMSCRIPTEN__
+    if (df->is_remote && !df->is_ciso) {
+        return remote_read(df, offset, dest, size);
+    }
+#endif
     if (!df->is_ciso) {
         fseek(df->fp, (long)offset, SEEK_SET);
         return (u32)fread(dest, 1, size, df->fp) == size;
@@ -103,8 +165,15 @@ static int disc_read(DiscFile* df, u32 offset, void* dest, u32 size) {
             } else {
                 u32 phys = CISO_HDR_SIZE +
                     (u32)df->block_phys[bi] * df->block_size + bo;
-                fseek(df->fp, (long)phys, SEEK_SET);
-                if ((u32)fread(out, 1, chunk, df->fp) != chunk) return 0;
+#ifdef __EMSCRIPTEN__
+                if (df->is_remote) {
+                    if (!remote_read(df, phys, out, chunk)) return 0;
+                } else
+#endif
+                {
+                    fseek(df->fp, (long)phys, SEEK_SET);
+                    if ((u32)fread(out, 1, chunk, df->fp) != chunk) return 0;
+                }
             }
 
             out += chunk;
@@ -286,10 +355,11 @@ static int str_ends_ci(const char* s, const char* suffix) {
 }
 
 static int find_disc_image(char* out_path, int out_sz) {
-    static const char* dirs[] = {
 #ifdef __EMSCRIPTEN__
-        "/rom",
-#endif
+    snprintf(out_path, out_sz, "%s", "/static/ac.ciso");
+    return 1;
+#else
+    static const char* dirs[] = {
         ".", "orig", "rom", NULL
     };
     int d;
@@ -313,6 +383,7 @@ static int find_disc_image(char* out_path, int out_sz) {
         closedir(dp);
     }
     return 0;
+#endif
 }
 
 /* ---- public API ---- */
