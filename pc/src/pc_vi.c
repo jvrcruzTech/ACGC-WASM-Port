@@ -110,7 +110,7 @@ void VIWaitForRetrace(void) {
     }
 
     /* report slow frames (>20ms = missed 60fps by >4ms) */
-    if (frame_ms > 20.0 && g_pc_verbose) {
+    if (frame_ms > 20.0 && g_pc_profile_enabled) {
         double swap_ms = (double)(t_after_swap - t_before_swap) * 1000.0 / (double)perf_freq;
         double pace_ms = (double)(t_after_pace - t_before_pace) * 1000.0 / (double)perf_freq;
         double work_ms = (double)(vi_enter - frame_start_time) * 1000.0 / (double)perf_freq;
@@ -134,6 +134,7 @@ void VIWaitForRetrace(void) {
             snprintf(title, sizeof(title), "Animal Crossing - %.1f FPS", fps);
             SDL_SetWindowTitle(g_pc_window, title);
 #ifdef __EMSCRIPTEN__
+            if (g_pc_profile_enabled)
             {
                 extern int pc_gx_draw_call_count;
                 extern int pc_emu64_frame_cmds;

@@ -1,4 +1,5 @@
 #include "pc_gx_internal.h"
+#include "pc_profiler.h"
 #include "pc_shader_seed.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -469,7 +470,7 @@ static PCGXShaderVariant* compile_variant(const PCGXShaderKey* k) {
     } else if (!s_precompiling) {
         key_cache_append(k);
     }
-    if (prog != default_program && g_pc_verbose) {
+    if (prog != default_program && g_pc_profile_enabled) {
         printf("[PC/TEV] shader variant %d compiled (stages=%d tex=%d%d%d light=%d ind=%d fog=%d)\n",
                s_variant_count, k->num_stages,
                k->st[0].use_tex, k->st[1].use_tex, k->st[2].use_tex,

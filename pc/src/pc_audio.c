@@ -19,8 +19,14 @@
 #define RING_BUF_MASK    (RING_BUF_SAMPLES - 1)
 
 /* Produce more samples when buffer drops below this level.
- * ~4 audio frames ahead = ~70ms of buffer at 32kHz stereo. */
+ * Native has a producer thread, but web feeds audio from the main loop.
+ * Keep a deeper WASM queue so short WebGL/JS hitches don't underrun. */
+#ifdef __EMSCRIPTEN__
+#define AUDIO_PRODUCE_THRESHOLD 12288
+#define AUDIO_PRODUCE_MAX_FRAMES 16
+#else
 #define AUDIO_PRODUCE_THRESHOLD 4480
+#endif
 
 static s16 ring_buffer[RING_BUF_SAMPLES];
 static SDL_atomic_t ring_write_pos; /* written by audio producer thread */
@@ -237,7 +243,7 @@ void pc_audio_web_pump(void) {
     }
     if (audio_device != 0 && audio_dma_running) {
         SDL_PauseAudioDevice(audio_device, 0);
-        for (int i = 0; i < 8 && pc_audio_get_buffer_fill() < AUDIO_PRODUCE_THRESHOLD; i++) {
+        for (int i = 0; i < AUDIO_PRODUCE_MAX_FRAMES && pc_audio_get_buffer_fill() < AUDIO_PRODUCE_THRESHOLD; i++) {
             pc_audio_process_frame();
         }
     }

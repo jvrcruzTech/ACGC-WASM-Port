@@ -5821,7 +5821,7 @@ u32 emu64::emu64_taskstart_r(Gfx* dl_p) {
             }
         }
 #endif
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && defined(PC_WEB_EMU64_TRACE)
         {
             static int web_task_cmd_diag = 0;
             if (web_task_cmd_diag < 96) {

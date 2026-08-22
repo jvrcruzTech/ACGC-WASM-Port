@@ -168,6 +168,17 @@ static void apply_frame_limit_setting(void) {
     g_frame_limiter = (u32)max_fps;
 }
 
+static void apply_web_performance_settings(void) {
+#ifdef __EMSCRIPTEN__
+    if (g_pc_settings.max_fps <= 0 || g_pc_settings.max_fps > 60) {
+        g_pc_settings.max_fps = 60;
+    }
+    if (g_pc_settings.msaa > 0) {
+        g_pc_settings.msaa = 0;
+    }
+#endif
+}
+
 static void apply_borderless_acres_setting(void) {
     int enabled = g_pc_settings.borderless_acres != 0;
 
@@ -382,6 +393,7 @@ void pc_settings_cycle_resolution(int* width, int* height, int dir) {
 }
 
 void pc_settings_apply(void) {
+    apply_web_performance_settings();
     apply_frame_limit_setting();
     apply_borderless_acres_setting();
 
@@ -465,6 +477,7 @@ void pc_settings_load(void) {
         line = strtok_r(NULL, "\n", &saveptr);
     }
     free(text);
+    apply_web_performance_settings();
     apply_frame_limit_setting();
     apply_borderless_acres_setting();
 
@@ -476,6 +489,7 @@ void pc_settings_load(void) {
     FILE* f = fopen(SETTINGS_FILE, "r");
     if (!f) {
         write_defaults(SETTINGS_FILE);
+        apply_web_performance_settings();
         apply_frame_limit_setting();
         apply_borderless_acres_setting();
         printf("[Settings] Created default %s\n", SETTINGS_FILE);
@@ -502,6 +516,7 @@ void pc_settings_load(void) {
         }
     }
     fclose(f);
+    apply_web_performance_settings();
     apply_frame_limit_setting();
     apply_borderless_acres_setting();
 
