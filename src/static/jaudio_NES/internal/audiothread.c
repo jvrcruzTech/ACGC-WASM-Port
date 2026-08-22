@@ -89,6 +89,10 @@ extern void StartAudioThread(void* pHeap, s32 heapSize, u32 aramSize, u32 flags)
     pc_audio_start_producer_thread();
 }
 
+int pc_audio_is_initialized(void) {
+    return pc_audio_initialized;
+}
+
 /* Called by the audio producer thread to generate samples */
 void pc_audio_process_frame(void) {
     if (!pc_audio_initialized) return;

@@ -47,6 +47,11 @@ extern void sAdo_Calc_MicPosition_forLevel(f32* fcalc, u16* scalc, const xyz_t* 
 }
 
 extern void sAdo_GameFrame() {
+#ifdef __EMSCRIPTEN__
+    if (!pc_audio_is_initialized()) {
+        return;
+    }
+#endif
     Na_GameFrame();
 #ifdef __EMSCRIPTEN__
     pc_audio_web_pump();

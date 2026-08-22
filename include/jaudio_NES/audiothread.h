@@ -22,6 +22,7 @@ extern int DspSyncCountCheck(void);
 extern void StartAudioThread(void* pHeap, s32 heapSize, u32 aramSize, u32 flags);
 
 #ifdef TARGET_PC
+int pc_audio_is_initialized(void);
 void pc_audio_process_frame(void);
 #endif
 
