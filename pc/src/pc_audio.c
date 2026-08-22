@@ -12,7 +12,7 @@
 #include "pc_settings.h"
 #include "jaudio_NES/audiothread.h"
 
-#define PC_AUDIO_SAMPLE_RATE 32000
+#define PC_AUDIO_SAMPLE_RATE 33600
 
 /* lock-free SPSC ring buffer (producer=audio thread, consumer=SDL callback) */
 #define RING_BUF_SAMPLES (32768) /* ~512ms at 32kHz stereo */

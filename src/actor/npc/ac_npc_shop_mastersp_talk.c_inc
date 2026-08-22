@@ -305,7 +305,7 @@ static int aSHM_change_talk_proc(NPC_SHOP_MASTERSP_ACTOR* shop_mastersp, int tal
         &aSHM_stop_player,
         &aSHM_give_player,
         &aSHM_talk_tamakesi,
-        (aSHM_TALK_PROC)&none_proc1,
+        (aSHM_TALK_PROC)pc_noop_ptr_play,
         &aSHM_say_goodbye,
         &aSHM_exit_wait,
     };

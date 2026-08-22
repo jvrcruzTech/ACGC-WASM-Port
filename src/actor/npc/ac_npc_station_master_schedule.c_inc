@@ -254,7 +254,7 @@ typedef void (*aSTM_THINK_PROC)(NPC_STATION_MASTER_ACTOR*, GAME_PLAY*);
 
 // clang-format off
 static aSTM_THINK_PROC proc_table[] = {
-    (aSTM_THINK_PROC)none_proc1,
+    (aSTM_THINK_PROC)pc_noop_ptr_play,
     aSTM_get_off_wait,
     aSTM_turn,
     aSTM_look_player,
@@ -420,7 +420,7 @@ typedef void (*aSTM_THINK_INIT_PROC)(NPC_STATION_MASTER_ACTOR* actor, GAME_PLAY*
 
 // clang-format off
 static aSTM_THINK_INIT_PROC init_table[] = {
-    (aSTM_THINK_INIT_PROC)none_proc1,
+    (aSTM_THINK_INIT_PROC)pc_noop_ptr_play,
       aSTM_get_off_wait_init,
       aSTM_intro_demo_wait_init,
       aSTM_interrupt_turn_init,

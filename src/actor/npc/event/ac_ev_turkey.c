@@ -326,12 +326,12 @@ typedef void (*aETKY_TALK_INIT_PROC)(EV_TURKEY_ACTOR* turkey, GAME_PLAY* play);
 static void aETKY_init_proc(EV_TURKEY_ACTOR* turkey, GAME_PLAY* play, int talk_act) {
     static aETKY_TALK_INIT_PROC init_proc[] = {
         // clang-format off
-        (aETKY_TALK_INIT_PROC)none_proc1,
-        (aETKY_TALK_INIT_PROC)none_proc1,
-        (aETKY_TALK_INIT_PROC)none_proc1,
-        (aETKY_TALK_INIT_PROC)none_proc1,
-        (aETKY_TALK_INIT_PROC)none_proc1,
-        (aETKY_TALK_INIT_PROC)none_proc1,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
+        (aETKY_TALK_INIT_PROC)pc_noop_ptr_play,
         aETKY_Give_Me_Fork_Init,
         aETKY_Give_You_Present_Init,
         // clang-format on
@@ -428,7 +428,7 @@ static void aETKY_Give_You_Present(EV_TURKEY_ACTOR* turkey, GAME_PLAY* play) {
 static void aETKY_SetupTalkStat(EV_TURKEY_ACTOR* turkey, GAME_PLAY* play, int talk_act) {
     static aETKY_TALK_PROC process[] = {
         // clang-format off
-        (aETKY_TALK_PROC)none_proc1,
+        (aETKY_TALK_PROC)pc_noop_ptr_play,
         aETKY_Explain_Env0123,
         aETKY_Explain_Env0123,
         aETKY_Explain_Env0123,

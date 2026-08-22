@@ -1039,7 +1039,7 @@ void pc_gx_flush_vertices(void) {
                 (GLfloat)g_gx.fog_type, g_gx.fog_start, g_gx.fog_end, 0.0f
             };
             loc = UL(fog_type);   if (loc >= 0) glUniform4fv(loc, 1, fog_params);
-            loc = UL(fog_enable); if (loc >= 0) glUniform1i(loc, g_gx.fog_type != 0);
+            loc = UL(fog_enable); if (loc >= 0) glUniform1i(loc, 0);
             loc = UL(fog_color);  if (loc >= 0) glUniform4fv(loc, 1, g_gx.fog_color);
         }
 

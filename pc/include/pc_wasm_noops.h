@@ -7,6 +7,7 @@
 #include "ac_npc_h.h"
 
 void pc_noop_game(GAME* game);
+void pc_noop_void(void);
 void pc_noop_actor(ACTOR* actor);
 void pc_noop_actor_game(ACTOR* actor, GAME* game);
 void pc_noop_nature(ACTOR* actor);

@@ -66,14 +66,14 @@ static aTNN0_think_data_c dt_tbl[] = {
 };
 
 static aTNN0_THINK_PROC proc_table[] = {
-    (aTNN0_THINK_PROC)none_proc1,
+    (aTNN0_THINK_PROC)pc_noop_ptr_play,
     aTNN0_birth,
 };
 
 typedef void (*aTNN0_THINK_INIT_PROC)(TUNAHIKI_NPC0_ACTOR* actor, GAME_PLAY* play);
 
 static aTNN0_THINK_INIT_PROC init_table[] = {
-    (aTNN0_THINK_INIT_PROC)none_proc1,
+    (aTNN0_THINK_INIT_PROC)pc_noop_ptr_play,
     aTNN0_wait_init,
 };
 

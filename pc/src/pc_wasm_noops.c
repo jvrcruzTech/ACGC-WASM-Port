@@ -4,6 +4,9 @@ void pc_noop_game(GAME* game) {
     (void)game;
 }
 
+void pc_noop_void(void) {
+}
+
 void pc_noop_actor(ACTOR* actor) {
     (void)actor;
 }
