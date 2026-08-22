@@ -148,11 +148,7 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
     const existed = !!files["memory_card"]?.exists;
     files["memory_card"] = { bytes: data, exists: true };
     if (!Module.acPersistSaveFile) return 1;
-    files["memory_card"].exists = existed;
-    Module.acPersistSaveFile("memory_card", data).catch((err) => {
-        console.error("[Animal Crossing card] store failed", err);
-    });
-    files["memory_card"].exists = true;
+    Module.acPersistSaveFile("memory_card", data, existed);
     console.log("[Animal Crossing card] stored memory_card for " + gameId + " (" + length + " bytes)");
     return 1;
 });
@@ -166,11 +162,7 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const existed = !!files["memory_card"]?.exists;
     files["memory_card"] = { bytes: data, exists: true };
     if (!Module.acPersistSaveFile) return 1;
-    files["memory_card"].exists = existed;
-    Module.acPersistSaveFile("memory_card", data).catch((err) => {
-        console.error("[Animal Crossing card] delete failed", err);
-    });
-    files["memory_card"].exists = true;
+    Module.acPersistSaveFile("memory_card", data, existed);
     console.log("[Animal Crossing card] cleared memory_card for " + gameId);
     return 1;
 });

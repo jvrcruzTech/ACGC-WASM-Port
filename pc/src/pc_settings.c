@@ -48,11 +48,7 @@ EM_JS(void, pc_web_save_put_text_js, (const char* key_ptr, const char* text_ptr)
     const existed = !!files[key]?.exists;
     files[key] = { bytes: body, exists: true };
     if (!Module.acPersistSaveFile) return;
-    files[key].exists = existed;
-    Module.acPersistSaveFile(key, body).catch((err) => {
-        console.error("[Settings] Failed to save " + key + " to server", err);
-    });
-    files[key].exists = true;
+    Module.acPersistSaveFile(key, body, existed);
 });
 #endif
 

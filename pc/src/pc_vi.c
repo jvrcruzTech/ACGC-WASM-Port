@@ -87,10 +87,10 @@ void VIWaitForRetrace(void) {
                 Uint64 elapsed_us = (now - frame_start_time) * 1000000 / perf_freq;
                 /* Spin for sub-ms precision. */
                 while (elapsed_us < (Uint64)pace_us) {
-                    Uint64 remain_us = (Uint64)pace_us - elapsed_us;
 #ifdef __EMSCRIPTEN__
-                    emscripten_sleep((unsigned int)((remain_us + 999) / 1000));
+                    break;
 #else
+                    Uint64 remain_us = (Uint64)pace_us - elapsed_us;
                     if (remain_us > 2000) {
                         SDL_Delay(1);
                     }

@@ -77,11 +77,7 @@ EM_JS(void, pc_web_keybindings_put_text_js, (const char* key_ptr, const char* te
     const existed = !!files[key]?.exists;
     files[key] = { bytes: body, exists: true };
     if (!Module.acPersistSaveFile) return;
-    files[key].exists = existed;
-    Module.acPersistSaveFile(key, body).catch((err) => {
-        console.error("[Keybindings] Failed to save " + key + " to server", err);
-    });
-    files[key].exists = true;
+    Module.acPersistSaveFile(key, body, existed);
 });
 #endif
 
