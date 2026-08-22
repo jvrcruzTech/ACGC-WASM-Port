@@ -419,10 +419,11 @@ void pc_gx_begin_frame(void) {
 #endif
 #ifdef __EMSCRIPTEN__
     glClearDepthf((GLfloat)g_gx.clear_depth);
+    glClearColor(g_gx.clear_color[0], g_gx.clear_color[1], g_gx.clear_color[2], 1.0f);
 #else
     glClearDepth(g_gx.clear_depth);
-#endif
     glClearColor(g_gx.clear_color[0], g_gx.clear_color[1], g_gx.clear_color[2], g_gx.clear_color[3]);
+#endif
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     pc_profiler_add_time(PC_PROF_TIMER_GX_BEGIN, prof_start);
 }
