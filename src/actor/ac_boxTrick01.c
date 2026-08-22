@@ -1,6 +1,7 @@
 #include "ac_boxTrick01.h"
 
 #include "m_name_table.h"
+#include "pc_wasm_noops.h"
 
 #ifdef TARGET_PC
 static void BoxTrick01_Actor_ct(ACTOR* actor, GAME* game);
@@ -22,7 +23,7 @@ ACTOR_PROFILE BoxTrick01_Profile = {
     &BoxTrick01_Actor_ct,
     &BoxTrick01_Actor_dt,
     &BoxTrick01_Actor_move,
-    (mActor_proc)&none_proc1,
+    pc_noop_actor_game,
     NULL
 };
 

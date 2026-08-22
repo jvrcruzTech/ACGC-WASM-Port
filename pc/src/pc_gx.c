@@ -1713,7 +1713,13 @@ void GXSetCoPlanar(GXBool enable) { (void)enable; }
 /* --- Fog --- */
 void GXSetFog(u32 type, f32 startz, f32 endz, f32 nearz, f32 farz, GXColor color) {
     pc_gx_flush_if_begin_complete();
-    float c[4] = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f };
+    (void)color;
+    type = GX_FOG_NONE;
+    startz = 0.0f;
+    endz = 0.0f;
+    nearz = 0.0f;
+    farz = 0.0f;
+    float c[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     if (g_gx.fog_type == (int)type && g_gx.fog_start == startz &&
         g_gx.fog_end == endz && g_gx.fog_near == nearz && g_gx.fog_far == farz &&
         memcmp(g_gx.fog_color, c, sizeof(c)) == 0) return;

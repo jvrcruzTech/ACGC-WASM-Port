@@ -5,6 +5,7 @@
 #include "m_common_data.h"
 #include "GBA2/gba2.h"
 #include "m_player_lib.h"
+#include "pc_wasm_noops.h"
 
 static void aBC_actor_ct(ACTOR*, GAME*);
 static void aBC_actor_move(ACTOR*, GAME*);
@@ -17,9 +18,9 @@ ACTOR_PROFILE Birth_Control_Profile = {
   ACTOR_OBJ_BANK_KEEP,
   sizeof(BIRTH_CONTROL_ACTOR),
   &aBC_actor_ct,
-  mActor_NONE_PROC1,
+  pc_noop_actor_game,
   &aBC_actor_move,
-  mActor_NONE_PROC1,
+  pc_noop_actor_game,
   NULL
 };
 
