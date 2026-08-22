@@ -1,23 +1,7 @@
 #include "pc_gx_internal.h"
 #include "pc_shader_seed.h"
 #ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-EM_JS(int, pc_web_load_extra_text_file_js, (const char* path_ptr), {
-    const path = UTF8ToString(path_ptr);
-    const root = typeof globalThis !== "undefined" ? globalThis : window;
-    const files = (root && root.__ACGC_EXTRA_FILES__) || Module.acExtraFiles || {};
-    let shortPath = path;
-    if (shortPath.startsWith("shaders/")) shortPath = shortPath.slice(8);
-    const bytes = files[path] || files[shortPath];
-    if (!bytes) {
-        console.error("[Animal Crossing shader] missing " + path + "; available keys=" + Object.keys(files).join(","));
-        return 0;
-    }
-    const ptr = _malloc(bytes.length + 1);
-    HEAPU8.set(bytes, ptr);
-    HEAPU8[ptr + bytes.length] = 0;
-    return ptr;
-});
+#include "generated/pc_web_shaders.h"
 #endif
 
 int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
@@ -26,7 +10,24 @@ int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
 
 static char* load_text_file(const char* path) {
 #ifdef __EMSCRIPTEN__
-    return (char*)pc_web_load_extra_text_file_js(path);
+    const unsigned char* data = NULL;
+    unsigned int len = 0;
+
+    if (!strcmp(path, "default.vert") || !strcmp(path, "shaders/default.vert")) {
+        data = pc_web_default_vert_shader;
+        len = pc_web_default_vert_shader_len;
+    } else if (!strcmp(path, "default.frag") || !strcmp(path, "shaders/default.frag")) {
+        data = pc_web_default_frag_shader;
+        len = pc_web_default_frag_shader_len;
+    }
+
+    if (!data || len == 0) return NULL;
+
+    char* buf = (char*)malloc((size_t)len + 1);
+    if (!buf) return NULL;
+    memcpy(buf, data, (size_t)len);
+    buf[len] = '\0';
+    return buf;
 #else
     FILE* f = fopen(path, "rb");
     if (!f) return NULL;
