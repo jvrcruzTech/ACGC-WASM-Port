@@ -64,7 +64,7 @@ EM_JS(int, pc_web_rom_read_js, (const char* url_ptr, unsigned int offset, unsign
     const end = offset + size - 1;
     const xhr = new XMLHttpRequest();
     xhr.open("GET", url, false);
-    xhr.responseType = "arraybuffer";
+    xhr.overrideMimeType("text/plain; charset=x-user-defined");
     xhr.withCredentials = true;
     xhr.setRequestHeader("Range", "bytes=" + offset + "-" + end);
     try {
@@ -73,16 +73,18 @@ EM_JS(int, pc_web_rom_read_js, (const char* url_ptr, unsigned int offset, unsign
         console.error("[AC ROM] fetch failed", err);
         return 0;
     }
-    if ((xhr.status !== 206 && xhr.status !== 200) || !xhr.response) {
+    if (xhr.status !== 206 && xhr.status !== 200) {
         console.error("[AC ROM] fetch status=" + xhr.status + " range=bytes=" + offset + "-" + end);
         return 0;
     }
-    const data = new Uint8Array(xhr.response);
-    if (data.length < size) {
-        console.error("[AC ROM] short read bytes=" + data.length + " wanted=" + size);
+    const text = xhr.responseText || "";
+    if (text.length < size) {
+        console.error("[AC ROM] short read bytes=" + text.length + " wanted=" + size);
         return 0;
     }
-    HEAPU8.set(data.subarray(0, size), dest_ptr);
+    for (let i = 0; i < size; i++) {
+        HEAPU8[dest_ptr + i] = text.charCodeAt(i) & 0xff;
+    }
     return 1;
 });
 
