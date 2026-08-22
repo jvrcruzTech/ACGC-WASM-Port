@@ -188,7 +188,7 @@ static aTKN0_THINK_INIT_PROC init_table[] = {
 };
 
 static void aTKN0_setup_think_proc(TOKYOSO_NPC0_ACTOR* actor, GAME_PLAY* play, s16 think_idx) {
-    static aNPC_TALK_REQUEST_PROC talk_request_table[] = { (aNPC_TALK_REQUEST_PROC)none_proc1, aTKN0_norm_talk_request, (aNPC_TALK_REQUEST_PROC)none_proc1  };
+    static aNPC_TALK_REQUEST_PROC talk_request_table[] = { pc_noop_actor_game, aTKN0_norm_talk_request, pc_noop_actor_game  };
     aTKN0_think_data_c* dt;
 
     dt = &dt_tbl[think_idx];

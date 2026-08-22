@@ -83,7 +83,7 @@ static aEDZ_THINK_INIT_PROC init_table[] = {
 static void aEDZ_setup_think_proc(DOZAEMON_ACTOR* dozaemon, GAME_PLAY* play, u8 idx) {
     aEDZ_think_data_c* dt = &dt_tbl[idx];
     static aNPC_TALK_REQUEST_PROC talk_request_table[] = {
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aEDZ_norm_talk_request,
         aEDZ_force_talk_request,
     };

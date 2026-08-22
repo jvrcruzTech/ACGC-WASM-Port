@@ -295,7 +295,7 @@ static aEGH_PROC init_table[aEGH_THINK_INIT_NUM] = { (aEGH_PROC)&none_proc1, &aE
                                                      &aEGH_byebye_init };
 
 static void aEGH_setup_think_proc(EV_GHOST_ACTOR* ghost, GAME_PLAY* play, u8 think_act) {
-    static aNPC_TALK_REQUEST_PROC talk_request_table[aEGH_TALK_REQUEST_NUM] = { (aNPC_TALK_REQUEST_PROC)&none_proc1,
+    static aNPC_TALK_REQUEST_PROC talk_request_table[aEGH_TALK_REQUEST_NUM] = { pc_noop_actor_game,
                                                                                 &aEGH_norm_talk_request,
                                                                                 &aEGH_force_talk_request };
 

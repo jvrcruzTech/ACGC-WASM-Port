@@ -73,7 +73,7 @@ static void aNHM_actor_ct(ACTOR* actorx, GAME* game) {
         aNHM_actor_move,
         aNHM_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aNHM_talk_init,
         aNHM_talk_end_chk,
         0

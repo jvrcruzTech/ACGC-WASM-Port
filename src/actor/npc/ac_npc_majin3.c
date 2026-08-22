@@ -74,7 +74,7 @@ static void aMJN3_actor_ct(ACTOR* actorx, GAME* game) {
         aMJN3_actor_move,
         aMJN3_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aMJN3_talk_init,
         aMJN3_talk_end_chk,
         0,

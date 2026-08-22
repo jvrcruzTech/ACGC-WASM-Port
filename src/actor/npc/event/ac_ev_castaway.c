@@ -69,7 +69,7 @@ static void aECST_schedule_main_proc(NPC_ACTOR* actorx, GAME_PLAY* play) {
 }
 
 static void aECST_schedule_proc(NPC_ACTOR* actorx, GAME_PLAY* play, int type) {
-    static aNPC_SUB_PROC sche_proc[2] = { (aNPC_SUB_PROC)&none_proc1, aECST_schedule_main_proc };
+    static aNPC_SUB_PROC sche_proc[2] = { pc_noop_npc_sub, aECST_schedule_main_proc };
 
     (*sche_proc[type])(actorx, play);
 }

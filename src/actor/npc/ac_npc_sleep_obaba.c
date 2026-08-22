@@ -41,7 +41,7 @@ static void aNSO_actor_ct(ACTOR* actorx, GAME* game) {
         aNSO_actor_move,
         aNSO_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         (aNPC_TALK_INIT_PROC)none_proc1,
         (aNPC_TALK_END_CHECK_PROC)none_proc1,
         1,

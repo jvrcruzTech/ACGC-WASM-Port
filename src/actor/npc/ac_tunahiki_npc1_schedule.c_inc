@@ -185,7 +185,7 @@ static aTNN1_THINK_INIT_PROC init_table[] = {
 };
 
 static void aTNN1_setup_think_proc(TUNAHIKI_NPC1_ACTOR* actor, GAME_PLAY* play, u8 think_idx) {
-    static aNPC_TALK_REQUEST_PROC talk_request_table[] = { (aNPC_TALK_REQUEST_PROC)none_proc1, aTNN1_norm_talk_request, (aNPC_TALK_REQUEST_PROC)none_proc1  };
+    static aNPC_TALK_REQUEST_PROC talk_request_table[] = { pc_noop_actor_game, aTNN1_norm_talk_request, pc_noop_actor_game  };
     aTNN1_think_data_c* dt;
 
     dt = &dt_tbl[think_idx];

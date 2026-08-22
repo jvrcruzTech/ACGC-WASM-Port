@@ -109,7 +109,7 @@ static void aEGH_actor_ct(ACTOR* actorx, GAME* game) {
     &aEGH_actor_move,
     &aEGH_actor_draw,
     5,
-    (aNPC_TALK_REQUEST_PROC)&none_proc1,
+    pc_noop_actor_game,
     &aEGH_talk_init,
     &aEGH_talk_end_chk,
     0

@@ -52,7 +52,7 @@ ACTOR_PROFILE Npc_Totakeke_Profile = {
     &aNTT_actor_ct,
     &aNTT_actor_dt,
     &aNTT_actor_init,
-    (mActor_proc)none_proc1,
+    pc_noop_actor_game,
     &aNTT_actor_save,
 };
 
@@ -61,7 +61,7 @@ static void aNTT_actor_ct(ACTOR *actorx, GAME *game) {
         &aNTT_actor_move,
         &aNTT_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (mActor_proc)none_proc1,
+        pc_noop_actor_game,
         &aNTT_talk_init,
         &aNTT_talk_end_chk,
         0x0

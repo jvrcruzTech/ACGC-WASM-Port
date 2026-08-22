@@ -51,7 +51,7 @@ static void aEDSN_actor_ct(ACTOR* actorx, GAME* game) {
         aEDSN_actor_move,
         aEDSN_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aEDSN_talk_init,
         aEDSN_talk_end_chk,
         0,

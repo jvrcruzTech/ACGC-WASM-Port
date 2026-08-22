@@ -78,7 +78,7 @@ static void aNRST_actor_ct(ACTOR* actorx, GAME* game) {
         aNRST_actor_move,
         aNRST_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aNRST_talk_init,
         aNRST_talk_end_chk,
         0,

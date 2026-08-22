@@ -58,14 +58,14 @@ static void aEBRK_actor_ct(ACTOR* actorx, GAME* game) {
         broker->npc_class.actor_class.status_data.weight = 254;
 
         if (aEBRK_get_sell_item_sum() == 0 || aEBRK_check_start_around(actorx, game) == FALSE) {
-            broker->npc_class.talk_info.talk_request_proc = (aNPC_TALK_REQUEST_PROC)&none_proc1;
+            broker->npc_class.talk_info.talk_request_proc = pc_noop_actor_game;
             broker->next_action = aEBRK_ACTION_HIDE;
         } else {
             int hide_npc = Common_Get(special_event_common).broker.hide_npc;
 
             broker->npc_class.condition_info.hide_request = hide_npc;
             if (hide_npc == TRUE) {
-                broker->npc_class.talk_info.talk_request_proc = (aNPC_TALK_REQUEST_PROC)&none_proc1;
+                broker->npc_class.talk_info.talk_request_proc = pc_noop_actor_game;
                 broker->next_action = aEBRK_ACTION_HIDE;
             } else {
                 broker->next_action = aEBRK_ACTION_TALK_WAIT;

@@ -10,6 +10,9 @@
 #include "m_npc.h"
 #include "c_keyframe.h"
 #include "ac_npc_anim_def.h"
+#ifdef __EMSCRIPTEN__
+#include "pc_wasm_noops.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

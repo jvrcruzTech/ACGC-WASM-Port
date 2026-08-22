@@ -196,7 +196,7 @@ static void aNNW_actor_ct(ACTOR* actorx, GAME* game) {
         aNNW_actor_move,
         aNNW_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aNNW_talk_init,
         aNNW_talk_end_chk,
         0

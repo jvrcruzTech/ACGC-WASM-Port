@@ -42,7 +42,7 @@ static void aTMN0_actor_ct(ACTOR* actorx, GAME* game) {
         aTMN0_actor_move,
         aTMN0_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aTMN0_talk_init,
         aTMN0_talk_end_chk,
         0,

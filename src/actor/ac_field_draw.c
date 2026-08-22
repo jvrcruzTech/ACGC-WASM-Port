@@ -8,6 +8,7 @@
 #include "m_common_data.h"
 #include "m_rcp.h"
 #include "m_scene_table.h"
+#include "pc_wasm_noops.h"
 #include "sys_matrix.h"
 
 static void Bg_Draw_Actor_ct(ACTOR* actorx, GAME* game);
@@ -427,13 +428,9 @@ static void aFD_DrawXluBg(Gfx* gfx, int exists, GAME* game) {
 
 typedef void (*aFD_DRAW_PROC)(GAME* game);
 
-static void aFD_DrawNoop(GAME* game) {
-    (void)game;
-}
-
 static void aFD_DrawBlock(aFD_block_c* block, ACTOR* actorx, GAME* game) {
-    static aFD_DRAW_PROC draw_proc[] = { &aFD_DrawNoop, &Global_kankyo_set_room_prim,
-                                         &Global_kankyo_set_room_prim, &aFD_DrawNoop };
+    static aFD_DRAW_PROC draw_proc[] = { pc_noop_game, &Global_kankyo_set_room_prim,
+                                         &Global_kankyo_set_room_prim, pc_noop_game };
 
     int block_type = mFI_BkNum2BlockType(block->bx, block->bz);
     s8 anime_frame_count;

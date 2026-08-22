@@ -7,6 +7,7 @@
 #include "m_debug.h"
 #include "m_npc_schedule.h"
 #include "m_player_lib.h"
+#include "pc_wasm_noops.h"
 #include "libultra/libultra.h"
 
 #define mEnv_TIME_TO_SECS(hour, min, sec) ((hour) * mTM_SECONDS_IN_HOUR + (min) * mTM_SECONDS_IN_MINUTE + (sec))
@@ -925,10 +926,6 @@ static f32 mEnv_DiffuseLightEffectRate() {
 
 #include "../src/game/m_kankyo_weather.c_inc"
 
-static void mEnv_nature_noop(ACTOR* actor) {
-    (void)actor;
-}
-
 extern void mEnv_regist_nature(Kankyo* kankyo, NATURE_PROC nature_proc, void* arg) {
     kankyo->nature.proc = nature_proc;
     kankyo->nature.arg = arg;
@@ -938,7 +935,7 @@ extern int mEnv_unregist_nature(Kankyo* kankyo, NATURE_PROC nature_proc) {
     int res = FALSE;
 
     if (nature_proc == kankyo->nature.proc) {
-        mEnv_regist_nature(kankyo, &mEnv_nature_noop, NULL);
+        mEnv_regist_nature(kankyo, pc_noop_nature, NULL);
         res = TRUE;
     }
 
@@ -1375,7 +1372,7 @@ extern void Global_kankyo_ct(GAME* game, Kankyo* kankyo) {
     mEnv_set_time(kankyo);
     kankyo->countdown_timer = 0xFF;
     mEnv_RoomTypeLightSet(game, kankyo);
-    mEnv_regist_nature(kankyo, &mEnv_nature_noop, NULL);
+    mEnv_regist_nature(kankyo, pc_noop_nature, NULL);
     mEnv_MakeWindowLightAlpha(FALSE);
     mEnv_InitWind();
     l_mEnv_electric_light.switch_status =

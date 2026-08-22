@@ -44,7 +44,7 @@ static void aSEN_actor_ct(ACTOR* actorx, GAME* game) {
         &aSEN_actor_move,
         &aSEN_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)&none_proc1,
+        pc_noop_actor_game,
         &aSEN_talk_init,
         &aSEN_talk_end_chk,
         0,

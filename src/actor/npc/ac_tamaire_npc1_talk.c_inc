@@ -42,7 +42,7 @@ static void aTMN1_norm_talk_request(ACTOR* actorx, GAME* game) {
 static int aTMN1_talk_init(ACTOR* actorx, GAME* game) {
     TAMAIRE_NPC1_ACTOR* actor = (TAMAIRE_NPC1_ACTOR*)actorx;
 
-    actor->npc_class.talk_info.talk_request_proc = (aNPC_TALK_REQUEST_PROC)none_proc1;
+    actor->npc_class.talk_info.talk_request_proc = pc_noop_actor_game;
     mDemo_Set_ListenAble();
     mDemo_Start(actorx);
     return TRUE;

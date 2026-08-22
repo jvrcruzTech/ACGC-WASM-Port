@@ -157,7 +157,7 @@ static BOOL aNHM_talk_init(ACTOR* actorx, GAME* game) {
     hem->talk_timer--;
 #endif
     if (hem->talk_timer <= 0) {
-        hem->actor.talk_info.talk_request_proc = (aNPC_TALK_REQUEST_PROC)none_proc1;
+        hem->actor.talk_info.talk_request_proc = pc_noop_actor_game;
         aNHM_change_talk_proc(hem, aNHM_TALK_TRANS_DEMO_START_WAIT);
         mDemo_Set_ListenAble();
         ret = TRUE;

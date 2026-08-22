@@ -92,7 +92,7 @@ static void aNPS2_actor_ct(ACTOR* actorx, GAME* game) {
         &aNPS2_actor_move,
         &aNPS2_actor_draw,
         5,
-        (aNPC_TALK_REQUEST_PROC)&none_proc1,
+        pc_noop_actor_game,
         &aNPS2_talk_init,
         &aNPS2_talk_end_chk,
         0,

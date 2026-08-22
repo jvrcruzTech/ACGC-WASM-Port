@@ -47,7 +47,7 @@ static void aEMJ_actor_ct(ACTOR* actor, GAME* game) {
         aEMJ_actor_move,
         aEMJ_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aEMJ_talk_init,
         aEMJ_talk_end_chk,
         0,

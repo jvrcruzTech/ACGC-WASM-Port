@@ -313,7 +313,7 @@ static void aNRG2_setup_think_proc(NPC_RCN_GUIDE2_ACTOR* rcn_guide2, GAME_PLAY* 
         {
             (aNRG2_THINK_PROC)&none_proc1,
             &aNRG2_send_away_init,
-            (aNPC_TALK_REQUEST_PROC)&none_proc1,
+            pc_noop_actor_game,
             0,
             aNRG2_THINK_SEND_AWAY,
         },
@@ -334,7 +334,7 @@ static void aNRG2_setup_think_proc(NPC_RCN_GUIDE2_ACTOR* rcn_guide2, GAME_PLAY* 
         {
             &aNRG2_all_job_end,
             &aNRG2_all_job_end_init,
-            (aNPC_TALK_REQUEST_PROC)&none_proc1,
+            pc_noop_actor_game,
             0,
             aNRG2_THINK_ALL_JOB_END,
         },

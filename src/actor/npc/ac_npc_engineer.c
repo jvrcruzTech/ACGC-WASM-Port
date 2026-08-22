@@ -1,6 +1,7 @@
 #include "ac_npc_engineer.h"
 #include "m_name_table.h"
 #include "m_common_data.h"
+#include "pc_wasm_noops.h"
 
 extern void aNEG_actor_ct(ACTOR* actor, GAME* game);
 extern void aNEG_actor_dt(ACTOR* actor, GAME* game);
@@ -36,7 +37,7 @@ void aNEG_actor_ct(ACTOR* actor, GAME* game){
     };
     NPCENGINEER_ACTOR* engineer = (NPCENGINEER_ACTOR*)actor;
     if(Common_Get(clip.npc_clip)->birth_check_proc(actor,game) == TRUE){
-        engineer->npc_class.schedule.schedule_proc = (aNPC_SCHEDULE_PROC)mActor_NONE_PROC1;
+        engineer->npc_class.schedule.schedule_proc = pc_noop_npc_schedule;
         Common_Get(clip.npc_clip)->ct_proc(actor,game,&ct_data);
         engineer->npc_class.condition_info.demo_flg = -1;
         engineer->npc_class.condition_info.hide_request = 0;

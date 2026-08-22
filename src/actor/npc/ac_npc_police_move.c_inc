@@ -75,13 +75,13 @@ static void aPOL_nemu_act_main_proc(NPC_ACTOR* nactorx, GAME_PLAY* play) {
 }
 
 static void aPOL_taisou_act_proc(NPC_ACTOR* nactorx, GAME_PLAY* play, int idx) {
-    static aNPC_SUB_PROC act_proc[] = { aPOL_taisou_act_init_proc, (aNPC_SUB_PROC)none_proc1, aPOL_taisou_act_main_proc };
+    static aNPC_SUB_PROC act_proc[] = { aPOL_taisou_act_init_proc, pc_noop_npc_sub, aPOL_taisou_act_main_proc };
     
     (*act_proc[idx])(nactorx, play);
 }
 
 static void aPOL_nemu_act_proc(NPC_ACTOR* nactorx, GAME_PLAY* play, int idx) {
-    static aNPC_SUB_PROC act_proc[] = { aPOL_nemu_act_init_proc, (aNPC_SUB_PROC)none_proc1, aPOL_nemu_act_main_proc };
+    static aNPC_SUB_PROC act_proc[] = { aPOL_nemu_act_init_proc, pc_noop_npc_sub, aPOL_nemu_act_main_proc };
     
     (*act_proc[idx])(nactorx, play);
 }

@@ -93,7 +93,7 @@ static void aTKN1_actor_ct(ACTOR* actorx, GAME* game) {
         aTKN1_actor_move,
         aTKN1_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        pc_noop_actor_game,
         aTKN1_talk_init,
         aTKN1_talk_end_chk,
         0,
