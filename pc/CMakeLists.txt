@@ -447,8 +447,9 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sMAXIMUM_MEMORY=2048MB
         -sASYNCIFY
         -sINVOKE_RUN=0
-        -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain
+        -sEXPORTED_RUNTIME_METHODS=FS,callMain
         -sFORCE_FILESYSTEM=1
+        -lidbfs.js
     )
 elseif(TARGET SDL2::SDL2)
     target_link_libraries(ac_pc glad SDL2::SDL2)
