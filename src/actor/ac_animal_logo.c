@@ -58,6 +58,9 @@ extern u8 log_win_logo3_tex[];
 extern u8 log_win_logo4_tex[];
 
 extern cKF_Skeleton_R_c cKF_bs_r_logo_us_animal;
+
+static void aAL_none_action(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
+}
 extern cKF_Skeleton_R_c cKF_bs_r_logo_us_cros;
 extern cKF_Skeleton_R_c cKF_bs_r_logo_us_sing;
 
@@ -432,10 +435,10 @@ static void aAL_setupAction(ANIMAL_LOGO_ACTOR* actor, GAME* game, int action) {
     &aAL_logo_in_init,
     &aAL_back_fadein_init,
     &aAL_start_key_chk_start_wait_init,
-    (ANIMAL_LOGO_ACTION_PROC)&none_proc1,
+    &aAL_none_action,
     &aAL_fade_out_start_wait_init,
-    (ANIMAL_LOGO_ACTION_PROC)&none_proc1,
-    (ANIMAL_LOGO_ACTION_PROC)&none_proc1
+    &aAL_none_action,
+    &aAL_none_action
   };
 
   static ANIMAL_LOGO_ACTION_PROC process[aAL_ACTION_NUM] = {
@@ -448,8 +451,8 @@ static void aAL_setupAction(ANIMAL_LOGO_ACTOR* actor, GAME* game, int action) {
     &aAL_game_start_wait,
 #endif
     &aAL_fade_out_start_wait,
-    (ANIMAL_LOGO_ACTION_PROC)&none_proc1,
-    (ANIMAL_LOGO_ACTION_PROC)&none_proc1
+    &aAL_none_action,
+    &aAL_none_action
   };
 
 #ifdef TARGET_PC

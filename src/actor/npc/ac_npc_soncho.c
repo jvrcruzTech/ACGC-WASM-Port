@@ -28,6 +28,14 @@ static void aNS_actor_init(ACTOR* actorx, GAME* game);
 static void aNS_actor_move(ACTOR* actorx, GAME* game);
 static void aNS_actor_draw(ACTOR* actorx, GAME* game);
 static void aNS_actor_save(ACTOR* actorx, GAME* game);
+static void aNS_none_proc(NPC_SONCHO_ACTOR* actor) {
+}
+
+static void aNS_none_init(NPC_SONCHO_ACTOR* actor, GAME_PLAY* play) {
+}
+
+static void aNS_none_talk_request(ACTOR* actorx, GAME* game) {
+}
 
 // clang-format off
 ACTOR_PROFILE Npc_Soncho_Profile = {
@@ -56,7 +64,7 @@ static void aNS_actor_ct(ACTOR* actorx, GAME* game) {
         aNS_actor_move,
         aNS_actor_draw,
         aNPC_CT_SCHED_TYPE_SPECIAL,
-        (aNPC_TALK_REQUEST_PROC)none_proc1,
+        (aNPC_TALK_REQUEST_PROC)none_proc_actor,
         aNS_talk_init,
         aNS_talk_end_chk,
         0,

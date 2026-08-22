@@ -904,6 +904,9 @@ static void aUKI_set_proc_get(ACTOR* actorx, GAME* game, int arg) {
     uki->gyo_status = 7;
 }
 
+static void aUKI_set_proc_none(ACTOR* actorx, GAME* game, int arg) {
+}
+
 typedef void (*aUKI_INIT_PROC)(ACTOR*, GAME*, int);
 
 static void aUKI_set_proc(ACTOR* actorx, GAME* game, int proc, int arg) {
@@ -919,7 +922,7 @@ static void aUKI_set_proc(ACTOR* actorx, GAME* game, int proc, int arg) {
         &aUKI_set_proc_bite,
         &aUKI_set_proc_catch,
         &aUKI_set_proc_get,
-        (aUKI_INIT_PROC)&none_proc1,
+        &aUKI_set_proc_none,
     };
     // clang-format on
 

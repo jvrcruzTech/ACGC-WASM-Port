@@ -577,6 +577,9 @@ static void aIMN_fall_init(aINS_INSECT_ACTOR* insect, GAME* game) {
 
 typedef void (*aIMN_INIT_PROC)(aINS_INSECT_ACTOR* insect, GAME* game);
 
+static void aIMN_none_init(aINS_INSECT_ACTOR* insect, GAME* game) {
+}
+
 /**
  * Sets up a new action state for the insect.
  *
@@ -586,7 +589,7 @@ typedef void (*aIMN_INIT_PROC)(aINS_INSECT_ACTOR* insect, GAME* game);
  */
 static void aIMN_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) {
     static aIMN_INIT_PROC init_proc[] = {
-        (aIMN_INIT_PROC)none_proc1,
+        &aIMN_none_init,
         aIMN_let_escape_init,
         aIMN_hide_init,
         aIMN_appear_init,
@@ -599,7 +602,7 @@ static void aIMN_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) 
     };
 
     static aINS_ACTION_PROC act_proc[] = {
-        (aINS_ACTION_PROC)none_proc1,
+        (aINS_ACTION_PROC)none_proc_actor,
         aIMN_let_escape,
         aIMN_hide,
         aIMN_appear,
@@ -607,7 +610,7 @@ static void aIMN_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) 
         aIMN_wait,
         aIMN_disappear,
         aIMN_dive,
-        (aINS_ACTION_PROC)none_proc1,
+        (aINS_ACTION_PROC)none_proc_actor,
         aIMN_fall,
     };
 

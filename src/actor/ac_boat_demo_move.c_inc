@@ -249,6 +249,9 @@ static void aBTD_anchor(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
 
 typedef void (*aBTD_INIT_PROC)(BOAT_DEMO_ACTOR*, GAME_PLAY*);
 
+static void aBTD_none_init(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
+}
+
 static void aBTD_start_call_end_wait_init(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
     mBGMPsComp_make_ps_quietField(0x168);
 }
@@ -351,13 +354,13 @@ static void aBTD_anchor_init(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play) {
 
 static void aBTD_init_proc(BOAT_DEMO_ACTOR* boat_demo, GAME_PLAY* play, int action) {
     static aBTD_INIT_PROC init_proc[aBTD_ACTION_NUM] = {
-        (aBTD_INIT_PROC)&none_proc1,       (aBTD_INIT_PROC)&none_proc1,
-        (aBTD_INIT_PROC)&none_proc1,       &aBTD_start_call_end_wait_init,
+        &aBTD_none_init,                   &aBTD_none_init,
+        &aBTD_none_init,                   &aBTD_start_call_end_wait_init,
         &aBTD_song_bgm_start_wait_init,    &aBTD_sing_sendo_start_wait_init,
-        (aBTD_INIT_PROC)&none_proc1,       &aBTD_sendo_dialogue_start_wait_init,
+        &aBTD_none_init,                   &aBTD_sendo_dialogue_start_wait_init,
         &aBTD_sing_sendo_start_wait2_init, &aBTD_move_boat_end_wait_init,
         &aBTD_touch_wharf_end_wait_init,   &aBTD_pl_ride_off_start_wait_init,
-        (aBTD_INIT_PROC)&none_proc1,       &aBTD_anchor_init,
+        &aBTD_none_init,                   &aBTD_anchor_init,
     };
 
     (*init_proc[action])(boat_demo, play);

@@ -240,13 +240,16 @@ static void aIKA_attack_init(aINS_INSECT_ACTOR* insect, GAME* game) {
 
 typedef void (*aIKA_INIT_PROC)(aINS_INSECT_ACTOR*, GAME*);
 
+static void aIKA_none_init(aINS_INSECT_ACTOR* insect, GAME* game) {
+}
+
 static void aIKA_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) {
     // clang-format off
     static aIKA_INIT_PROC init_proc[] = {
         &aIKA_avoid_init,
         &aIKA_avoid_init,
         &aIKA_fly_init,
-        (aIKA_INIT_PROC)&none_proc1,
+        &aIKA_none_init,
         &aIKA_attack_wait_init,
         &aIKA_attack_init,
     };

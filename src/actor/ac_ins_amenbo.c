@@ -181,16 +181,19 @@ static void aIAB_rest_init(aINS_INSECT_ACTOR* insect, GAME* game) {
 
 typedef void (*aIAB_INIT_PROC)(aINS_INSECT_ACTOR*, GAME*);
 
+static void aIAB_none_init(aINS_INSECT_ACTOR* insect, GAME* game) {
+}
+
 static void aIAB_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) {
     static aIAB_INIT_PROC init_proc[] = {
-        (aIAB_INIT_PROC)&none_proc1,
+        &aIAB_none_init,
         &aIAB_let_escape_init,
         &aIAB_move_init,
         &aIAB_rest_init,
     };
 
     static aINS_ACTION_PROC act_proc[] = {
-        (aINS_ACTION_PROC)&none_proc1,
+        (aINS_ACTION_PROC)&none_proc_actor,
         &aIAB_let_escape,
         &aIAB_move,
         &aIAB_rest,

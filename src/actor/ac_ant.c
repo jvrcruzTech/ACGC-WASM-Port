@@ -16,6 +16,8 @@ enum {
 static void aANT_actor_ct(ACTOR* actorx, GAME* game);
 static void aANT_actor_move(ACTOR* actorx, GAME* game);
 static void aANT_actor_draw(ACTOR* actorx, GAME* game);
+static void aANT_none_init(ANT_ACTOR* ant) {
+}
 
 // clang-format off
 ACTOR_PROFILE Ant_Profile = {
@@ -123,7 +125,7 @@ typedef void (*aANT_INIT_PROC)(ANT_ACTOR* ant);
 
 static void aANT_setupAction(ANT_ACTOR* ant, int action) {
     static aANT_INIT_PROC init_proc[] = {
-        (aANT_INIT_PROC)&none_proc1,
+        &aANT_none_init,
         &aANT_caught_init,
         &aANT_disappear_init,
     };

@@ -483,7 +483,7 @@ static void aIKR_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) 
         aIKR_hide,
         aIKR_appear,
         aIKR_dive,
-        (aINS_ACTION_PROC)none_proc1,
+        (aINS_ACTION_PROC)none_proc_actor,
         aIKR_dug,
     };
 

@@ -378,7 +378,7 @@ static void aIDG_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) 
         aIDG_hide,
         aIDG_appear,
         aIDG_dive,
-        (aINS_ACTION_PROC)none_proc1,
+        (aINS_ACTION_PROC)none_proc_actor,
         aIDG_let_escape,
     };
 

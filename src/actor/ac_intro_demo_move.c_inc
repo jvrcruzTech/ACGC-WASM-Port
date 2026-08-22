@@ -277,19 +277,22 @@ static void aID_first_job_init(INTRO_DEMO_ACTOR* intro_demo, GAME_PLAY* play) {
 
 typedef void (*aID_INIT_PROC)(INTRO_DEMO_ACTOR*, GAME_PLAY*);
 
+static void aID_none_proc(INTRO_DEMO_ACTOR* intro_demo, GAME_PLAY* play) {
+}
+
 static void aID_init_proc(INTRO_DEMO_ACTOR* intro_demo, GAME_PLAY* play, int act) {
     // clang-format off
     static aID_INIT_PROC init_proc[] = {
         &aID_first_set_init,
         &aID_train_birth_wait_init,
-        (aID_INIT_PROC)&none_proc1,
+        &aID_none_proc,
         &aID_ride_off_player_init,
         &aID_walk_one_unit_init,
         &aID_go_out_of_station_init,
-        (aID_INIT_PROC)&none_proc1,
-        (aID_INIT_PROC)&none_proc1,
+        &aID_none_proc,
+        &aID_none_proc,
         &aID_walk_after_rcn_guide_init,
-        (aID_INIT_PROC)&none_proc1,
+        &aID_none_proc,
         &aID_decide_house_init,
         &aID_retire_rcn_guide_wait_init,
         &aID_first_job_init,
@@ -311,7 +314,7 @@ static void aID_setupAction(INTRO_DEMO_ACTOR* intro_demo, GAME_PLAY* play, int a
         &aID_birth_rcn_guide,
         &aID_first_talk_end_wait,
         &aID_walk_after_rcn_guide,
-        (aID_ACT_PROC)&none_proc1,
+        &aID_none_proc,
         &aID_decide_house,
         &aID_retire_rcn_guide_wait,
         &aID_first_job,

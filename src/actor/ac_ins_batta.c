@@ -553,7 +553,7 @@ static void aIBT_setupAction(aINS_INSECT_ACTOR* insect, int action, GAME* game) 
         &aIBT_chg_direction,
         &aIBT_wait,
         &aIBT_jump,
-        (aINS_ACTION_PROC)&none_proc1,
+        (aINS_ACTION_PROC)&none_proc_actor,
     };
 
     insect->action = action;

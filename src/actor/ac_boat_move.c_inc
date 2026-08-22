@@ -491,6 +491,9 @@ static void aBT_anchor(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
 
 typedef void (*aBT_INIT_PROC)(BOAT_ACTOR*, GAME_PLAY*);
 
+static void aBT_none_init(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
+}
+
 static void aBT_wait_init(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
     boat_actor->actor_class.speed = 0.0f;
 }
@@ -554,12 +557,12 @@ static void aBT_anchor_init(BOAT_ACTOR* boat_actor, GAME_PLAY* play) {
 
 static void aBT_setupAction(BOAT_ACTOR* boat_actor, GAME_PLAY* play, int action) {
     static aBT_INIT_PROC init_proc[aBT_ACTION_NUM] = {
-        (aBT_INIT_PROC)&none_proc1,
+        &aBT_none_init,
         &aBT_wait_init,
-        (aBT_INIT_PROC)&none_proc1,
-        (aBT_INIT_PROC)&none_proc1,
-        (aBT_INIT_PROC)&none_proc1,
-        (aBT_INIT_PROC)&none_proc1,
+        &aBT_none_init,
+        &aBT_none_init,
+        &aBT_none_init,
+        &aBT_none_init,
         &aBT_sitdown_end_wait_init,
         &aBT_move_wait_init,
         &aBT_move_init,

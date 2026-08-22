@@ -22,6 +22,8 @@ enum {
 static void aBEE_actor_ct(ACTOR* actorx, GAME* game);
 static void aBEE_actor_move(ACTOR* actorx, GAME* game);
 static void aBEE_actor_draw(ACTOR* actorx, GAME* game);
+static void aBEE_none_init(BEE_ACTOR* bee, GAME* game) {
+}
 
 // clang-format off
 ACTOR_PROFILE Bee_Profile = {
@@ -331,8 +333,8 @@ static void aBEE_setupAction(BEE_ACTOR* bee, int action, GAME* game) {
         &aBEE_appear_init,
         &aBEE_fly_init,
         &aBEE_caught_init,
-        (aBEE_INIT_PROC)&none_proc1,
-        (aBEE_INIT_PROC)&none_proc1,
+        &aBEE_none_init,
+        &aBEE_none_init,
         &aBEE_disappear_init,
     };
 
