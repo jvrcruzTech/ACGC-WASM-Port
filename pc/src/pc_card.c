@@ -122,78 +122,55 @@ static int card_filename_safe(const char* name) {
 }
 
 #ifdef __EMSCRIPTEN__
-EM_ASYNC_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned int dest_ptr, unsigned int capacity), {
+EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned int dest_ptr, unsigned int capacity), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
-    const url = "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/";
-    let response;
-    try {
-        response = await fetch(url, { credentials: "include" });
-    } catch (err) {
-        console.error("[Animal Crossing card] fetch failed", err);
-        return 0;
-    }
-    if (response.status === 404) return 0;
-    if (!response.ok) {
-        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + response.status);
-        return 0;
-    }
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const entry = (Module.acSaveFiles || {})["memory_card"];
+    if (!entry || !entry.bytes) return 0;
+    const bytes = entry.bytes;
     if (bytes.length > capacity) {
         console.error("[Animal Crossing card] fetch memory_card too large: " + bytes.length + " > " + capacity);
         return -1;
     }
+    if (Module.acPersistSaveFile) Module.acPersistSaveFile("memory_card", bytes);
     HEAPU8.set(bytes, dest_ptr);
     console.log("[Animal Crossing card] loaded memory_card for " + gameId + " (" + bytes.length + " bytes)");
     return bytes.length;
 });
 
-EM_ASYNC_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
+EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const data = HEAPU8.slice(data_ptr, data_ptr + length);
-    let response;
-    try {
-        response = await fetch("/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", {
-            method: "PUT",
-            credentials: "include",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: data
-        });
-    } catch (err) {
+    const files = Module.acSaveFiles || (Module.acSaveFiles = {});
+    const existed = !!files["memory_card"]?.exists;
+    files["memory_card"] = { bytes: data, exists: true };
+    if (!Module.acPersistSaveFile) return 1;
+    files["memory_card"].exists = existed;
+    Module.acPersistSaveFile("memory_card", data).catch((err) => {
         console.error("[Animal Crossing card] store failed", err);
-        return 0;
-    }
-    if (!response.ok) {
-        console.error("[Animal Crossing card] store " + slot + "/" + filename + " status=" + response.status);
-        return 0;
-    }
+    });
+    files["memory_card"].exists = true;
     console.log("[Animal Crossing card] stored memory_card for " + gameId + " (" + length + " bytes)");
     return 1;
 });
 
-EM_ASYNC_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
+EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
-    let response;
-    try {
-        response = await fetch("/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", {
-            method: "PUT",
-            credentials: "include",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: new Uint8Array(0)
-        });
-    } catch (err) {
+    const data = new Uint8Array(0);
+    const files = Module.acSaveFiles || (Module.acSaveFiles = {});
+    const existed = !!files["memory_card"]?.exists;
+    files["memory_card"] = { bytes: data, exists: true };
+    if (!Module.acPersistSaveFile) return 1;
+    files["memory_card"].exists = existed;
+    Module.acPersistSaveFile("memory_card", data).catch((err) => {
         console.error("[Animal Crossing card] delete failed", err);
-        return 0;
-    }
-    if (!response.ok) {
-        console.error("[Animal Crossing card] delete " + slot + "/" + filename + " status=" + response.status);
-        return 0;
-    }
+    });
+    files["memory_card"].exists = true;
     console.log("[Animal Crossing card] cleared memory_card for " + gameId);
     return 1;
 });
