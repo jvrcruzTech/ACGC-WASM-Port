@@ -97,6 +97,10 @@ static void Game_play_camera_proc(GAME_PLAY* play) {
     Camera2_process(play);
 }
 
+static void Game_play_fbdemo_wipe_cleanup_noop(fbdemo_wipe_u* wipe) {
+    (void)wipe;
+}
+
 static void Game_play_fbdemo_wipe_destroy(GAME_PLAY* play) {
     play->fbdemo_wipe.wipe_procs.cleanup_proc(&play->fbdemo_wipe.wipe_data);
     play->fb_wipe_mode = WIPE_MODE_NONE;
@@ -106,7 +110,7 @@ static void Game_play_fbdemo_wipe_destroy(GAME_PLAY* play) {
 static void Game_play_fbdemo_wipe_create_sub(GAME_PLAY* play) {
     static void* wipe_normal_proc[] = {
         fbdemo_wipe1_init,
-        none_proc1,
+        Game_play_fbdemo_wipe_cleanup_noop,
         fbdemo_wipe1_move,
         fbdemo_wipe1_draw,
         fbdemo_wipe1_startup,
@@ -117,7 +121,7 @@ static void Game_play_fbdemo_wipe_create_sub(GAME_PLAY* play) {
     };
     static void* wipe_triforce_proc[] = {
         fbdemo_triforce_init,
-        none_proc1,
+        Game_play_fbdemo_wipe_cleanup_noop,
         fbdemo_triforce_move,
         fbdemo_triforce_draw,
         fbdemo_triforce_startup,
@@ -128,7 +132,7 @@ static void Game_play_fbdemo_wipe_create_sub(GAME_PLAY* play) {
     };
     static void* wipe_fade_proc[] = {
         fbdemo_fade_init,
-        none_proc1,
+        Game_play_fbdemo_wipe_cleanup_noop,
         fbdemo_fade_move,
         fbdemo_fade_draw,
         fbdemo_fade_startup,

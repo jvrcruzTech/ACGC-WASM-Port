@@ -1392,7 +1392,9 @@ static void mFM_SetBlockKind(u8* type_p, int* kind_p, mFM_combination_c* combi_p
     }
 }
 
-extern void mFM_SetBlockKindLoadCombi() {
+extern void mFM_SetBlockKindLoadCombi(GAME* game) {
+    (void)game;
+
     mFM_SetBlockKind(g_block_type_p, g_block_kind_p, Save_Get(combi_table[0]), data_combi_table, BLOCK_TOTAL_NUM);
 }
 

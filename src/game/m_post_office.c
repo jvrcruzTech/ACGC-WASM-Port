@@ -513,7 +513,9 @@ extern void mPO_business_proc(GAME_PLAY* play) {
     }
 }
 
-extern void mPO_first_work() {
+extern void mPO_first_work(GAME_PLAY* play) {
+    (void)play;
+
     lbRTC_time_c* time = &Save_Get(save_check).time;
     if (mTM_AreTimesEqual(time, &mTM_rtcTime_clear_code) == FALSE && lbRTC_IsOverRTC(time) == FALSE) {
         Common_Set(force_mail_delivery_flag, TRUE);

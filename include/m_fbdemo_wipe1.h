@@ -25,5 +25,5 @@ extern void fbdemo_wipe1_draw(fbdemo_wipe1*, Gfx**);
 extern void fbdemo_wipe1_startup(fbdemo_wipe1*);
 extern void fbdemo_wipe1_settype(fbdemo_wipe1*, int);
 extern void fbdemo_wipe1_setcolor_rgba8888(fbdemo_wipe1*, u32);
-extern u8 fbdemo_wipe1_is_finish(fbdemo_wipe1*);
+extern int fbdemo_wipe1_is_finish(fbdemo_wipe1*);
 #endif

@@ -105,11 +105,14 @@ void fbdemo_triforce_draw(fbdemo_triforce* this, Gfx** gfxP) {
   *gfxP = gfx;
 }
 
-s8 fbdemo_triforce_is_finish(fbdemo_triforce* this) { return this->finished; }
+int fbdemo_triforce_is_finish(fbdemo_triforce* this) { return this->finished; }
 
 void fbdemo_triforce_settype(fbdemo_triforce* this, int type) {
   this->textureno = ((type & 0x80) != 0) ? 1 : ((type & 0x40) != 0 ? 2 : 0);
   this->direction = (type & 0xF) != 1;
 }
 
-void fbdemo_triforce_setcolor_rgba8888(void) {}
+void fbdemo_triforce_setcolor_rgba8888(fbdemo_triforce* this, u32 color) {
+  (void)this;
+  (void)color;
+}

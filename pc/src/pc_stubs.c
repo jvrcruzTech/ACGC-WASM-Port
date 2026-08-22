@@ -70,7 +70,7 @@ void VIConfigurePan(u16 x_origin, u16 y_origin, u16 width, u16 height) {
 }
 
 int __abs(int x) { return x < 0 ? -x : x; }
-void _strip(float x) { (void)x; }
+int _strip(float x) { (void)x; return 0; }
 
 /* famicom (NES emulator) — real implementation in famicom.cpp, stubs for linker */
 void ksNesEmuFrame(void* wp, void* sp, u32 flags) { (void)wp; (void)sp; (void)flags; }

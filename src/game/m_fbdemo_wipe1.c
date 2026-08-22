@@ -172,4 +172,4 @@ void fbdemo_wipe1_setcolor_rgba8888(fbdemo_wipe1* this, u32 color) {
   this->color.rgba = color;
 }
 
-u8 fbdemo_wipe1_is_finish(fbdemo_wipe1* this) { return this->finished; }
+int fbdemo_wipe1_is_finish(fbdemo_wipe1* this) { return this->finished; }

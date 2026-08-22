@@ -97,4 +97,4 @@ void fbdemo_fade_setcolor_rgba8888(fbdemo_fade* this, u32 color) {
   this->color.rgba = color;
 }
 
-u8 fbdemo_fade_is_finish(fbdemo_fade* this) { return this->isDone; }
+int fbdemo_fade_is_finish(fbdemo_fade* this) { return this->isDone; }
