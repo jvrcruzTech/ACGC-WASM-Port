@@ -229,7 +229,7 @@ static void pc_gx_build_shader_key(PCGXShaderKey* k) {
     if (ni > 4) ni = 4;
     k->num_ind = (u8)ni;
 
-    k->fog_enable = g_gx.fog_type != 0;
+    k->fog_enable = 0;
 
     k->alpha[0] = (u8)g_gx.alpha_comp0;
     k->alpha[1] = (u8)g_gx.alpha_op;

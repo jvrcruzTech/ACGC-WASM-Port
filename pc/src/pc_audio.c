@@ -17,6 +17,7 @@
 /* lock-free SPSC ring buffer (producer=audio thread, consumer=SDL callback) */
 #define RING_BUF_SAMPLES (32768) /* ~512ms at 32kHz stereo */
 #define RING_BUF_MASK    (RING_BUF_SAMPLES - 1)
+#define RING_TARGET_SAMPLES (8192) /* keep latency bounded after web-audio unlock stalls */
 
 /* Produce more samples when buffer drops below this level.
  * ~4 audio frames ahead = ~70ms of buffer at 32kHz stereo. */
@@ -148,10 +149,23 @@ void AIInitDMA(u32 addr, u32 size) {
     u32 rp = (u32)SDL_AtomicGet(&ring_read_pos);
     SDL_MemoryBarrierAcquire();
     u32 used = wp - rp;
-    u32 free = RING_BUF_SAMPLES - used;
 
-    if (n_samples > free) {
-        n_samples = free & ~1u;
+    if (used > RING_BUF_SAMPLES) {
+        rp = wp - RING_TARGET_SAMPLES;
+        rp &= ~1u;
+        used = wp - rp;
+    }
+
+    if (used + n_samples > RING_TARGET_SAMPLES) {
+        u32 keep = (n_samples < RING_TARGET_SAMPLES) ? (RING_TARGET_SAMPLES - n_samples) : 0;
+        rp = wp - keep;
+        rp &= ~1u;
+        SDL_AtomicSet(&ring_read_pos, (int)rp);
+        used = wp - rp;
+    }
+
+    if (n_samples > RING_BUF_SAMPLES - used) {
+        n_samples = (RING_BUF_SAMPLES - used) & ~1u;
     }
 
     int vol = g_pc_settings.master_volume;
