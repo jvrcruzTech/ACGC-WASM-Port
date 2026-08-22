@@ -1930,9 +1930,9 @@ void GXInitLightDir(void* lt, f32 nx, f32 ny, f32 nz) {
     PCGXLightObjInternal* l = (PCGXLightObjInternal*)lt;
     l->nx = nx; l->ny = ny; l->nz = nz;
 }
-void GXInitLightColor(void* lt, u32 color) {
+void GXInitLightColor(void* lt, GXColor color) {
     PCGXLightObjInternal* l = (PCGXLightObjInternal*)lt;
-    l->color = color;
+    memcpy(&l->color, &color, sizeof(color));
 }
 void GXInitLightAttn(void* lt, f32 a0, f32 a1, f32 a2, f32 k0, f32 k1, f32 k2) {
     PCGXLightObjInternal* l = (PCGXLightObjInternal*)lt;

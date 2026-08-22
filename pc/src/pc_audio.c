@@ -102,10 +102,6 @@ static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
 
 void AIInit(u8* stack) {
     (void)stack;
-#ifdef __EMSCRIPTEN__
-    printf("[AUDIO] SDL audio device disabled on web; running silent\n");
-    return;
-#endif
     if (audio_device != 0) return;
 
     SDL_AudioSpec want, have;

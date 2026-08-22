@@ -1,6 +1,9 @@
 #include "audio.h"
 
 #include "jaudio_NES/game64.h"
+#ifdef __EMSCRIPTEN__
+#include "jaudio_NES/audiothread.h"
+#endif
 #include "jaudio_NES/melody.h"
 #include "jaudio_NES/rhythm.h"
 #include "jaudio_NES/radio.h"
@@ -44,7 +47,9 @@ extern void sAdo_Calc_MicPosition_forLevel(f32* fcalc, u16* scalc, const xyz_t* 
 
 extern void sAdo_GameFrame() {
     Na_GameFrame();
-    /* pc_audio_process_frame() now runs on dedicated audio producer thread */
+#ifdef __EMSCRIPTEN__
+    pc_audio_process_frame();
+#endif
 }
 
 extern void sAdo_BgmStart(u8 id) {
