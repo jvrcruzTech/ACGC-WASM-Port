@@ -413,7 +413,13 @@ int main(int argc, char* argv[]) {
     WEB_LOG("[AC native] initializing platform");
     pc_platform_init();
     WEB_LOG("[AC native] initializing ROM reader");
-    pc_disc_init();
+    if (!pc_disc_init()) {
+#ifdef __EMSCRIPTEN__
+        fprintf(stderr, "[PC] Failed to open /rom/ac. Check the /rom/ac request status and CISO_PATH on the backend.\n");
+#else
+        fprintf(stderr, "[PC] Failed to open a disc image from ., orig, or rom.\n");
+#endif
+    }
     WEB_LOG("[AC native] initializing assets");
     if (!pc_assets_init()) {
         const char* msg =

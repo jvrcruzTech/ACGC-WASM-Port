@@ -84,6 +84,10 @@ static char l_card_b_gci_path[300] = {0};      /* Path to the Card B GCI file, i
 
 /* External: scan card_b/ for valid AC GCI file (defined in pc_card.c) */
 extern int pc_card_scan_for_gci(int chan, char* out_path, int out_size);
+#ifdef __EMSCRIPTEN__
+extern int pc_web_card_load_path(const char* path);
+extern int pc_web_card_store_path(const char* path);
+#endif
 
 /* External: functions from decomp used in mCD_toNextLand */
 extern void mTM_rtcTime_limit_check(void);
@@ -440,6 +444,9 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         return FALSE;
     }
 
+#ifdef __EMSCRIPTEN__
+    pc_web_card_store_path(gci_path);
+#endif
     OSReport("[PC] GCI save: written successfully to %s (backups rotated)\n", gci_path);
     return TRUE;
 }
@@ -453,6 +460,9 @@ static int pc_save_read_gci(const char* path) {
     u32 offset;
     long file_size;
 
+#ifdef __EMSCRIPTEN__
+    pc_web_card_load_path(path);
+#endif
     fp = fopen(path, "rb");
     if (!fp) {
         OSReport("[PC] GCI: fopen('%s') failed\n", path);
@@ -570,6 +580,9 @@ static int pc_save_read_gci_to_keep(const char* path) {
     Save_t* save_src;
     u32 offset;
 
+#ifdef __EMSCRIPTEN__
+    pc_web_card_load_path(path);
+#endif
     fp = fopen(path, "rb");
     if (!fp) return FALSE;
 
@@ -714,6 +727,9 @@ static int pc_save_scan_gci_dir(void) {
 int pc_save_reload(void) {
     struct stat st;
     if (!pc_save_loaded) return 0;
+#ifdef __EMSCRIPTEN__
+    pc_web_card_load_path(PC_GCI_PATH);
+#endif
     if (stat(PC_GCI_PATH, &st) == 0) {
         return pc_save_read_gci(PC_GCI_PATH);
     }
@@ -732,6 +748,9 @@ int pc_save_check_and_load(void) {
     pc_ensure_save_dirs();
     pc_save_migrate_legacy();
 
+#ifdef __EMSCRIPTEN__
+    pc_web_card_load_path(PC_GCI_PATH);
+#endif
     if (stat(PC_GCI_PATH, &st) == 0) {
         OSReport("[PC] Found GCI save: %s (%ld bytes)\n", PC_GCI_PATH, (long)st.st_size);
         if (pc_save_read_gci(PC_GCI_PATH)) {
@@ -943,6 +962,9 @@ static int pc_read_gci_land_info(const char* path, Save_t* out) {
     u8* file_data;
     int ok = FALSE;
 
+#ifdef __EMSCRIPTEN__
+    pc_web_card_load_path(path);
+#endif
     fp = fopen(path, "rb");
     if (!fp) return FALSE;
 

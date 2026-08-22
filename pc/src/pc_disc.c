@@ -368,6 +368,7 @@ static int str_ends_ci(const char* s, const char* suffix) {
 static int find_disc_image(char* out_path, int out_sz) {
 #ifdef __EMSCRIPTEN__
     snprintf(out_path, out_sz, "%s", "/rom/ac");
+    if (g_pc_verbose) printf("[PC] Web ROM path: %s\n", out_path);
     return 1;
 #else
     static const char* dirs[] = {
