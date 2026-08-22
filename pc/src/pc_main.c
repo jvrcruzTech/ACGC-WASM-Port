@@ -12,6 +12,13 @@
 #include "pc_profiler.h"
 #include "m_kankyo.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#define WEB_LOG(...) emscripten_log(EM_LOG_CONSOLE, __VA_ARGS__)
+#else
+#define WEB_LOG(...) ((void)0)
+#endif
+
 /* prefer discrete GPU on laptops */
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 1;
@@ -268,6 +275,9 @@ static int pc_parse_rain_intensity(const char* text) {
 }
 
 int main(int argc, char* argv[]) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+    WEB_LOG("[AC native] main entered argc=%d", argc);
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: AnimalCrossing [options]\n");
@@ -396,11 +406,15 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
+    WEB_LOG("[AC native] loading settings");
     SDL_SetMainReady();
     pc_settings_load();
     pc_keybindings_load();
+    WEB_LOG("[AC native] initializing platform");
     pc_platform_init();
+    WEB_LOG("[AC native] initializing ROM reader");
     pc_disc_init();
+    WEB_LOG("[AC native] initializing assets");
     if (!pc_assets_init()) {
         const char* msg =
             "No game data found.\n\n"
@@ -413,6 +427,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    WEB_LOG("[AC native] entering game boot");
     ac_entry();                         /* sets HotStartEntry = &entry */
     boot_main(argc, (const char**)argv); /* full init → HotStartEntry → game loop */
 

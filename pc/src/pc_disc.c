@@ -69,6 +69,9 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
     if (!df->is_remote || size == 0) return 0;
 
     snprintf(range, sizeof(range), "bytes=%lu-%lu", (unsigned long)offset, (unsigned long)(offset + size - 1));
+    if (g_pc_verbose) {
+        printf("[PC] ROM fetch: %s %s\n", df->url, range);
+    }
     headers[0] = "Range";
     headers[1] = range;
     headers[2] = NULL;
@@ -105,6 +108,7 @@ static int disc_open(DiscFile* df, const char* path) {
     if (path[0] == '/') {
         snprintf(df->url, sizeof(df->url), "%s", path);
         df->is_remote = 1;
+        if (g_pc_verbose) printf("[PC] Opening remote ROM: %s\n", df->url);
     } else
 #endif
     df->fp = fopen(path, "rb");
