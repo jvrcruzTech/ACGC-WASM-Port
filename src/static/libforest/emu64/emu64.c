@@ -347,6 +347,15 @@ static const u8 tblc[32][4] = {
 static texture_cache_data_entry_t texture_cache_data_entry_tbl[NUM_TEXTURE_CACHE_DATA];
 static int texture_cache_data_entry_num = 0;
 
+static GXColor emu64_raw_color_to_gx(u32 raw) {
+    GXColor color;
+    color.r = (raw >> 24) & 0xFF;
+    color.g = (raw >> 16) & 0xFF;
+    color.b = (raw >> 8) & 0xFF;
+    color.a = raw & 0xFF;
+    return color;
+}
+
 extern void emu64_texture_cache_data_entry_set(void* begin, void* end) {
     texture_cache_data_entry_tbl[texture_cache_data_entry_num].start = begin;
     texture_cache_data_entry_tbl[texture_cache_data_entry_num].end = end;
@@ -3167,7 +3176,7 @@ void emu64::dirty_check(int tile, int n_tiles, int do_texture_matrix) {
     if (IS_DIRTY(EMU64_DIRTY_FLAG_PRIM_COLOR)) {
         EMU64_TIMED_SEGMENT_BEGIN();
         CLEAR_DIRTY(EMU64_DIRTY_FLAG_PRIM_COLOR);
-        GXSetTevColor(GX_TEVREG1, this->primitive_color.color);
+        GXSetTevColor(GX_TEVREG1, emu64_raw_color_to_gx(this->primitive_color.raw));
         EMU64_TIMED_SEGMENT_END(dirty_primcolor_time);
     }
 
@@ -3176,7 +3185,7 @@ void emu64::dirty_check(int tile, int n_tiles, int do_texture_matrix) {
     if (IS_DIRTY(EMU64_DIRTY_FLAG_ENV_COLOR)) {
         EMU64_TIMED_SEGMENT_BEGIN();
         CLEAR_DIRTY(EMU64_DIRTY_FLAG_ENV_COLOR);
-        GXSetTevColor(GX_TEVREG2, this->environment_color.color);
+        GXSetTevColor(GX_TEVREG2, emu64_raw_color_to_gx(this->environment_color.raw));
         EMU64_TIMED_SEGMENT_END(dirty_envcolor_time);
     }
 
@@ -3295,11 +3304,11 @@ void emu64::dirty_check(int tile, int n_tiles, int do_texture_matrix) {
                 );
             }
 
-            GXInitLightColor(&light_obj, l->color.color);
+            GXInitLightColor(&light_obj, emu64_raw_color_to_gx(l->color.raw));
             GXLoadLightObjImm(&light_obj, (GXLightID)(1 << i));
         }
 
-        GXSetChanAmbColor(GX_COLOR0A0, this->lights[i].color.color);
+        GXSetChanAmbColor(GX_COLOR0A0, emu64_raw_color_to_gx(this->lights[i].color.raw));
         EMU64_TIMED_SEGMENT_END(dirty_lightX_time);
         this->dirty_lightX_cnt++;
     }

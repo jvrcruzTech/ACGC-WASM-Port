@@ -171,13 +171,21 @@ static void pc_unpack_rgba8f(u32 packed, float* out_rgba) {
     out_rgba[3] = (packed & 0xFF) / 255.0f;
 }
 
-/* Byte-based: reads RGBA from memory order. Use for GXColor structs (not N64 DL data). */
-static void pc_unpack_gxcolor_f(u32 color_as_u32, float* out_rgba) {
-    const u8* bytes = (const u8*)&color_as_u32;
-    out_rgba[0] = bytes[0] / 255.0f;
-    out_rgba[1] = bytes[1] / 255.0f;
-    out_rgba[2] = bytes[2] / 255.0f;
-    out_rgba[3] = bytes[3] / 255.0f;
+static void pc_unpack_gxcolor_f(GXColor color, float* out_rgba) {
+    out_rgba[0] = color.r / 255.0f;
+    out_rgba[1] = color.g / 255.0f;
+    out_rgba[2] = color.b / 255.0f;
+    out_rgba[3] = color.a / 255.0f;
+}
+
+static GXColor pc_gxcolor_from_stored_u32(u32 stored) {
+    GXColor color;
+    const u8* bytes = (const u8*)&stored;
+    color.r = bytes[0];
+    color.g = bytes[1];
+    color.b = bytes[2];
+    color.a = bytes[3];
+    return color;
 }
 
 /* Map tex matrix ID to slot: raw 0..9, GX enum 30..57 (stride 3), or 60=identity */
@@ -1566,16 +1574,11 @@ void GXSetTevOrder(u32 stage, u32 coord, u32 map, u32 color) {
     }
 }
 
-void GXSetTevColor(u32 id, u32 color_packed) {
+void GXSetTevColor(u32 id, GXColor color) {
     pc_gx_flush_if_begin_complete();
-    /* TEVREG0 uses GXColor fields (byte unpack), others come from EmuColor.raw (shift unpack) */
     if (id < GX_MAX_TEVREG) {
         float c[4];
-        if (id == GX_TEVREG0) {
-            pc_unpack_gxcolor_f(color_packed, c);
-        } else {
-            pc_unpack_rgba8f(color_packed, c);
-        }
+        pc_unpack_gxcolor_f(color, c);
         if (memcmp(g_gx.tev_colors[id], c, sizeof(c)) == 0) return;
         DIRTY(PC_GX_DIRTY_TEV_COLORS);
         memcpy(g_gx.tev_colors[id], c, sizeof(c));
@@ -1592,11 +1595,11 @@ void GXSetTevColorS10(u32 id, s16 r, s16 g, s16 b, s16 a) {
     }
 }
 
-void GXSetTevKColor(u32 id, u32 color_packed) {
+void GXSetTevKColor(u32 id, GXColor color) {
     pc_gx_flush_if_begin_complete();
     if (id < 4) {
         float c[4];
-        pc_unpack_rgba8f(color_packed, c);
+        pc_unpack_gxcolor_f(color, c);
         if (memcmp(g_gx.tev_k_colors[id], c, sizeof(c)) == 0) return;
         DIRTY(PC_GX_DIRTY_KONST);
         memcpy(g_gx.tev_k_colors[id], c, sizeof(c));
@@ -1799,24 +1802,24 @@ void GXSetChanCtrl(u32 chan, GXBool enable, u32 amb_src, u32 mat_src,
     }
 }
 
-void GXSetChanAmbColor(u32 chan, u32 color_packed) {
+void GXSetChanAmbColor(u32 chan, GXColor color) {
     pc_gx_flush_if_begin_complete();
     int idx = pc_gx_chan_index(chan);
     if (idx >= 0 && idx < 2) {
         float c[4];
-        pc_unpack_gxcolor_f(color_packed, c);
+        pc_unpack_gxcolor_f(color, c);
         if (memcmp(g_gx.chan_amb_color[idx], c, sizeof(c)) == 0) return;
         DIRTY(PC_GX_DIRTY_LIGHTING);
         memcpy(g_gx.chan_amb_color[idx], c, sizeof(c));
     }
 }
 
-void GXSetChanMatColor(u32 chan, u32 color_packed) {
+void GXSetChanMatColor(u32 chan, GXColor color) {
     pc_gx_flush_if_begin_complete();
     int idx = pc_gx_chan_index(chan);
     if (idx >= 0 && idx < 2) {
         float c[4];
-        pc_unpack_gxcolor_f(color_packed, c);
+        pc_unpack_gxcolor_f(color, c);
         if (memcmp(g_gx.chan_mat_color[idx], c, sizeof(c)) == 0) return;
         DIRTY(PC_GX_DIRTY_LIGHTING);
         memcpy(g_gx.chan_mat_color[idx], c, sizeof(c));
@@ -1954,7 +1957,7 @@ void GXLoadLightObjImm(void* lt, u32 light) {
     if (slot < 0) return;
 
     float c[4];
-    pc_unpack_gxcolor_f(l->color, c);
+    pc_unpack_gxcolor_f(pc_gxcolor_from_stored_u32(l->color), c);
     if (g_gx.lights[slot].pos[0] == l->px && g_gx.lights[slot].pos[1] == l->py &&
         g_gx.lights[slot].pos[2] == l->pz && g_gx.lights[slot].dir[0] == l->nx &&
         g_gx.lights[slot].dir[1] == l->ny && g_gx.lights[slot].dir[2] == l->nz &&
