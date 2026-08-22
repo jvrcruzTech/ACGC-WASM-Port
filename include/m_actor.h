@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 typedef void (*mActor_proc)(ACTOR*, GAME*);
-#define NONE_ACTOR_PROC ((mActor_proc)&none_proc1)
+#define NONE_ACTOR_PROC ((mActor_proc)&none_proc_actor)
 
 #define mAc_MAX_ACTORS 200
 
@@ -1154,7 +1154,7 @@ struct actor_s {
     /* 0x170 */ ACTOR_DLFTBL* dlftbl; /* display list function table */
 };
 
-#define mActor_NONE_PROC1 ((mActor_proc)none_proc1)
+#define mActor_NONE_PROC1 ((mActor_proc)none_proc_actor)
 
 typedef struct actor_list_s {
     /* 0x00 */ int num_actors;

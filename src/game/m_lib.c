@@ -691,6 +691,16 @@ extern int none_proc1() {
     return 0;
 }
 
+extern void none_proc_actor(ACTOR* actor, GAME* game) {
+}
+
+extern int none_proc_draw_chk(ACTOR* actor, GAME_PLAY* play) {
+    return FALSE;
+}
+
+extern void none_proc_play(GAME_PLAY* play) {
+}
+
 /**
  * @brief No-op function meant for use in actor profiles.
  *

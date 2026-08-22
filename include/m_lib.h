@@ -125,6 +125,9 @@ extern s16 add_calc_short_angle3(s16* pValue, s16 target, f32 fraction, s16 maxS
 extern void rgba_t_move(rgba_t* dest, const rgba_t* const src);
 
 extern int none_proc1();
+extern void none_proc_actor(ACTOR* actor, GAME* game);
+extern int none_proc_draw_chk(ACTOR* actor, GAME_PLAY* play);
+extern void none_proc_play(GAME_PLAY* play);
 extern void none_proc2(ACTOR* actor, GAME* game);
 
 extern int _Game_play_isPause(GAME_PLAY* play);
