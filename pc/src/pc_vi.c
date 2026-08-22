@@ -136,9 +136,18 @@ void VIWaitForRetrace(void) {
 #ifdef __EMSCRIPTEN__
             {
                 extern int pc_gx_draw_call_count;
+                extern int pc_emu64_frame_cmds;
+                extern int pc_emu64_frame_dl_cmds;
+                extern int pc_emu64_frame_tri_cmds;
+                extern int pc_emu64_frame_vtx_cmds;
+                extern int pc_emu64_frame_cull_visible;
+                extern int pc_emu64_frame_cull_rejected;
                 GLenum gl_err = glGetError();
-                printf("[WEB/FRAME] frame=%lu fps=%.1f draws=%d gl=0x%04X audio_fill=%d\n",
+                printf("[WEB/FRAME] frame=%lu fps=%.1f draws=%d cmds=%d dl=%d tri=%d vtx=%d cull=%d/%d gl=0x%04X audio_fill=%d\n",
                        (unsigned long)pc_frame_counter, fps, pc_gx_draw_call_count,
+                       pc_emu64_frame_cmds, pc_emu64_frame_dl_cmds,
+                       pc_emu64_frame_tri_cmds, pc_emu64_frame_vtx_cmds,
+                       pc_emu64_frame_cull_visible, pc_emu64_frame_cull_rejected,
                        (unsigned int)gl_err, pc_audio_get_buffer_fill());
             }
 #endif
