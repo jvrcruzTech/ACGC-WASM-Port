@@ -55,7 +55,6 @@ extern void sAdo_GameFrame() {
     Na_GameFrame();
 #ifdef __EMSCRIPTEN__
     pc_audio_web_pump();
-    pc_audio_process_frame();
 #endif
 }
 
