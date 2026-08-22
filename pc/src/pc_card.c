@@ -122,32 +122,24 @@ static int card_filename_safe(const char* name) {
 }
 
 #ifdef __EMSCRIPTEN__
-EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned int dest_ptr, unsigned int capacity), {
+EM_ASYNC_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned int dest_ptr, unsigned int capacity), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
-    if (xhr.overrideMimeType) {
-        xhr.overrideMimeType("text/plain; charset=x-user-defined");
-    }
-    xhr.withCredentials = true;
+    const url = "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/";
+    let response;
     try {
-        xhr.send();
+        response = await fetch(url, { credentials: "include" });
     } catch (err) {
         console.error("[Animal Crossing card] fetch failed", err);
         return 0;
     }
-    if (xhr.status === 404) return 0;
-    if (xhr.status !== 200) {
-        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + xhr.status);
+    if (response.status === 404) return 0;
+    if (!response.ok) {
+        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + response.status);
         return 0;
     }
-    const response = xhr.responseText || "";
-    const bytes = new Uint8Array(response.length);
-    for (let i = 0; i < response.length; i++) {
-        bytes[i] = response.charCodeAt(i) & 0xff;
-    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.length > capacity) {
         console.error("[Animal Crossing card] fetch memory_card too large: " + bytes.length + " > " + capacity);
         return -1;
@@ -157,45 +149,49 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
     return bytes.length;
 });
 
-EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
+EM_ASYNC_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const data = HEAPU8.slice(data_ptr, data_ptr + length);
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    let response;
     try {
-        xhr.send(data);
+        response = await fetch("/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: data
+        });
     } catch (err) {
         console.error("[Animal Crossing card] store failed", err);
         return 0;
     }
-    if (xhr.status < 200 || xhr.status >= 300) {
-        console.error("[Animal Crossing card] store " + slot + "/" + filename + " status=" + xhr.status);
+    if (!response.ok) {
+        console.error("[Animal Crossing card] store " + slot + "/" + filename + " status=" + response.status);
         return 0;
     }
     console.log("[Animal Crossing card] stored memory_card for " + gameId + " (" + length + " bytes)");
     return 1;
 });
 
-EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
+EM_ASYNC_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    let response;
     try {
-        xhr.send(new Uint8Array(0));
+        response = await fetch("/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: new Uint8Array(0)
+        });
     } catch (err) {
         console.error("[Animal Crossing card] delete failed", err);
         return 0;
     }
-    if (xhr.status < 200 || xhr.status >= 300) {
-        console.error("[Animal Crossing card] delete " + slot + "/" + filename + " status=" + xhr.status);
+    if (!response.ok) {
+        console.error("[Animal Crossing card] delete " + slot + "/" + filename + " status=" + response.status);
         return 0;
     }
     console.log("[Animal Crossing card] cleared memory_card for " + gameId);

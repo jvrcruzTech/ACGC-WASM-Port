@@ -57,49 +57,65 @@ PCPadBindings g_pc_padbindings;
 static const char* KEYBINDINGS_FILE = "keybindings.ini";
 
 #ifdef __EMSCRIPTEN__
-EM_JS(char*, pc_web_keybindings_get_text_js, (const char* key_ptr), {
+EM_ASYNC_JS(char*, pc_web_keybindings_get_text_js, (const char* key_ptr), {
     const key = UTF8ToString(key_ptr);
     const gameId = Module.acGameId || "animal_crossing";
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
-    xhr.withCredentials = true;
-    xhr.send();
-    if (xhr.status === 404) return 0;
-    if (xhr.status !== 200) return 0;
-    const text = xhr.responseText || "";
+    const url = "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/";
+    let response;
+    try {
+        response = await fetch(url, { credentials: "include" });
+    } catch (err) {
+        console.error("[Keybindings] Failed to load " + key + " from server", err);
+        return 0;
+    }
+    if (response.status === 404) return 0;
+    if (!response.ok) {
+        console.error("[Keybindings] Failed to load " + key + " from server: " + response.status);
+        return 0;
+    }
+    const text = new TextDecoder().decode(new Uint8Array(await response.arrayBuffer()));
     const len = lengthBytesUTF8(text) + 1;
     const ptr = _malloc(len);
     stringToUTF8(text, ptr, len);
     return ptr;
 });
 
-EM_JS(void, pc_web_keybindings_put_text_js, (const char* key_ptr, const char* text_ptr), {
+EM_ASYNC_JS(void, pc_web_keybindings_put_text_js, (const char* key_ptr, const char* text_ptr), {
     const key = UTF8ToString(key_ptr);
     const text = UTF8ToString(text_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const url = "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/";
-    const exists = new XMLHttpRequest();
-    exists.open("GET", url, false);
-    exists.withCredentials = true;
-    exists.send();
-    const method = exists.status === 404 ? "POST" : "PUT";
-    const xhr = new XMLHttpRequest();
-    xhr.open(method, url, false);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
-    xhr.send(new TextEncoder().encode(text));
-    if (xhr.status === 409 && method === "POST") {
-        const retry = new XMLHttpRequest();
-        retry.open("PUT", url, false);
-        retry.withCredentials = true;
-        retry.setRequestHeader("Content-Type", "application/octet-stream");
-        retry.send(new TextEncoder().encode(text));
-        if (retry.status >= 200 && retry.status < 300) return;
-        console.error("[Keybindings] Failed to save " + key + " to server: " + retry.status);
+    const body = new TextEncoder().encode(text);
+    let exists;
+    try {
+        exists = await fetch(url, { credentials: "include" });
+    } catch (err) {
+        console.error("[Keybindings] Failed to check " + key + " on server", err);
         return;
     }
-    if (xhr.status < 200 || xhr.status >= 300) {
-        console.error("[Keybindings] Failed to save " + key + " to server: " + xhr.status);
+    const method = exists.status === 404 ? "POST" : "PUT";
+    let response;
+    try {
+        response = await fetch(url, {
+            method,
+            credentials: "include",
+            headers: { "Content-Type": "application/octet-stream" },
+            body
+        });
+        if (response.status === 409 && method === "POST") {
+            response = await fetch(url, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/octet-stream" },
+                body
+            });
+        }
+    } catch (err) {
+        console.error("[Keybindings] Failed to save " + key + " to server", err);
+        return;
+    }
+    if (!response.ok) {
+        console.error("[Keybindings] Failed to save " + key + " to server: " + response.status);
     }
 });
 #endif
