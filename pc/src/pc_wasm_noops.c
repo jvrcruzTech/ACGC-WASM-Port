@@ -17,6 +17,13 @@ void pc_noop_nature(ACTOR* actor) {
     (void)actor;
 }
 
+void pc_noop_npc_draw_before(GAME* game, NPC_ACTOR* nactorx, void* rot_p, void* trans_p) {
+    (void)game;
+    (void)nactorx;
+    (void)rot_p;
+    (void)trans_p;
+}
+
 void pc_noop_npc_draw_after(GAME* game, NPC_ACTOR* nactorx, int joint_idx) {
     (void)game;
     (void)nactorx;
