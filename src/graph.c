@@ -221,6 +221,25 @@ static void graph_task_set00(GRAPH* this) {
 
 static int graph_draw_finish(GRAPH* this) {
     int err;
+#ifdef __EMSCRIPTEN__
+    {
+        static int web_graph_diag = 0;
+        if (web_graph_diag < 20) {
+            printf("[WEB/GRAPH] before_finish frame=%d work=%ld bg_opa=%ld shadow=%ld bg_xlu=%ld poly_opa=%ld poly_xlu=%ld light=%ld font=%ld overlay=%ld\n",
+                   this->frame_counter,
+                   (long)(this->work_thaga.thaGfx.head_p - this->Gfx_list05),
+                   (long)(this->bg_opaque_thaga.thaGfx.head_p - this->Gfx_list10),
+                   (long)(this->shadow_thaga.thaGfx.head_p - this->Gfx_list08),
+                   (long)(this->bg_translucent_thaga.thaGfx.head_p - this->Gfx_list11),
+                   (long)(this->polygon_opaque_thaga.thaGfx.head_p - this->Gfx_list00),
+                   (long)(this->polygon_translucent_thaga.thaGfx.head_p - this->Gfx_list01),
+                   (long)(this->light_thaga.thaGfx.head_p - this->Gfx_list09),
+                   (long)(this->font_thaga.thaGfx.head_p - this->Gfx_list07),
+                   (long)(this->overlay_thaga.thaGfx.head_p - this->Gfx_list04));
+            web_graph_diag++;
+        }
+    }
+#endif
     OPEN_DISP(this);
 
     gSPBranchList(NOW_WORK_DISP++, this->Gfx_list10);
@@ -450,6 +469,7 @@ extern void graph_proc(void* arg) {
     graph_ct(&graph_class);
 
     while (dlftbl != NULL) {
+        int dlftbl_index = (int)(dlftbl - &game_dlftbls[0]);
         size_t size = dlftbl->alloc_size;
         GAME* game = (GAME*)malloc(size);
         OSTime time = OSGetTime();
@@ -491,6 +511,19 @@ extern void graph_proc(void* arg) {
             time = current_time;
 
             PC_DIAG(10, "graph_proc: loop top, game=%p, dt=%f\n", (void*)game, delta_time);
+#ifdef __EMSCRIPTEN__
+            {
+                static int web_game_diag = 0;
+                if (web_game_diag < 20) {
+                    printf("[WEB/GAME] dlftbl=%d frame=%u doing=%u point=%u disable_display=%u exec=%p next=%p\n",
+                           dlftbl_index, (unsigned)game->frame_counter,
+                           (unsigned)game->doing, (unsigned)game->doing_point,
+                           (unsigned)game->disable_display, (void*)game->exec,
+                           (void*)game->next_game_init);
+                    web_game_diag++;
+                }
+            }
+#endif
             if (!dvderr_draw()) {
                 graph_main(__graph, game);
             }
