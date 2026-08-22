@@ -7,6 +7,7 @@
 #include "m_random_field.h"
 #include "m_common_data.h"
 #include "m_rcp.h"
+#include "m_scene_table.h"
 #include "sys_matrix.h"
 
 static void Bg_Draw_Actor_ct(ACTOR* actorx, GAME* game);
@@ -426,9 +427,13 @@ static void aFD_DrawXluBg(Gfx* gfx, int exists, GAME* game) {
 
 typedef void (*aFD_DRAW_PROC)(GAME* game);
 
+static void aFD_DrawNoop(GAME* game) {
+    (void)game;
+}
+
 static void aFD_DrawBlock(aFD_block_c* block, ACTOR* actorx, GAME* game) {
-    static aFD_DRAW_PROC draw_proc[] = { (aFD_DRAW_PROC)&none_proc1, &Global_kankyo_set_room_prim,
-                                         &Global_kankyo_set_room_prim, (aFD_DRAW_PROC)&none_proc1 };
+    static aFD_DRAW_PROC draw_proc[] = { &aFD_DrawNoop, &Global_kankyo_set_room_prim,
+                                         &Global_kankyo_set_room_prim, &aFD_DrawNoop };
 
     int block_type = mFI_BkNum2BlockType(block->bx, block->bz);
     s8 anime_frame_count;
@@ -457,7 +462,13 @@ static void aFD_DrawBlock(aFD_block_c* block, ACTOR* actorx, GAME* game) {
         CLOSE_DISP(game->graph);
 
         aFD_SetViewerData(anime_data, play);
-        (*draw_proc[Common_Get(field_draw_type)])(game);
+        {
+            int draw_type = Common_Get(field_draw_type);
+            if (draw_type < 0 || draw_type >= FIELD_DRAW_TYPE_NUM) {
+                draw_type = FIELD_DRAW_TYPE_OUTDOORS;
+            }
+            (*draw_proc[draw_type])(game);
+        }
 
         if (aFD_SetBeachColorOpaSegment(actorx, game, block->bx, block->bz)) {
             u32 kind = mFI_BkNum2BlockKind(block->bx, block->bz);
