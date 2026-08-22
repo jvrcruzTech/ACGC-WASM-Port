@@ -1286,8 +1286,7 @@ int emu64::combine_auto() {
         GXTevAlphaArg alpha_c = (GXTevAlphaArg)tbla[Ac][1]; /* Ac1 */
         GXTevAlphaArg alpha_d = (GXTevAlphaArg)tbla[Ad][0]; /* Ad1 */
 
-        /* @BUG - Is this alpha_c != GX_CC_ZERO check supposed to be alpha_c != GX_CA_ZERO? */
-        if (color_c != GX_CC_ZERO || color_d != GX_CC_CPREV || alpha_c != GX_CC_ZERO || alpha_d != GX_CA_APREV) {
+        if (color_c != GX_CC_ZERO || color_d != GX_CC_CPREV || alpha_c != GX_CA_ZERO || alpha_d != GX_CA_APREV) {
             if (color_a == GX_CC_ZERO) {
                 GXSetTevColorIn((GXTevStageID)stage, GX_CC_ZERO, color_b, color_c, color_d);
                 color_stages = (GXTevStageID)(stage + 1);
