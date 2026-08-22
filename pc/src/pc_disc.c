@@ -68,7 +68,7 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
 
     if (!df->is_remote || size == 0) return 0;
 
-    snprintf(range, sizeof(range), "bytes=%u-%u", offset, offset + size - 1);
+    snprintf(range, sizeof(range), "bytes=%lu-%lu", (unsigned long)offset, (unsigned long)(offset + size - 1));
     headers[0] = "Range";
     headers[1] = range;
     headers[2] = NULL;
@@ -85,6 +85,13 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
          fetch->data != NULL &&
          fetch->numBytes >= size;
     if (ok) memcpy(dest, fetch->data, size);
+    else if (g_pc_verbose) {
+        printf("[PC] ROM fetch failed: %s %s status=%u bytes=%lu wanted=%lu\n",
+               df->url, range,
+               fetch ? fetch->status : 0,
+               fetch ? (unsigned long)fetch->numBytes : 0UL,
+               (unsigned long)size);
+    }
     if (fetch) emscripten_fetch_close(fetch);
     return ok;
 }
@@ -356,7 +363,7 @@ static int str_ends_ci(const char* s, const char* suffix) {
 
 static int find_disc_image(char* out_path, int out_sz) {
 #ifdef __EMSCRIPTEN__
-    snprintf(out_path, out_sz, "%s", "/static/ac.ciso");
+    snprintf(out_path, out_sz, "%s", "/rom/ac");
     return 1;
 #else
     static const char* dirs[] = {
