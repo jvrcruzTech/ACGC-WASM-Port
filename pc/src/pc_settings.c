@@ -49,11 +49,28 @@ EM_JS(void, pc_web_save_put_text_js, (const char* key_ptr, const char* text_ptr)
     const key = UTF8ToString(key_ptr);
     const text = UTF8ToString(text_ptr);
     const gameId = Module.acGameId || "animal_crossing";
+    const url = "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/";
+    const exists = new XMLHttpRequest();
+    exists.open("GET", url, false);
+    exists.responseType = "arraybuffer";
+    exists.withCredentials = true;
+    exists.send();
+    const method = exists.status === 404 ? "POST" : "PUT";
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
+    xhr.open(method, url, false);
     xhr.withCredentials = true;
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.send(new TextEncoder().encode(text));
+    if (xhr.status === 409 && method === "POST") {
+        const retry = new XMLHttpRequest();
+        retry.open("PUT", url, false);
+        retry.withCredentials = true;
+        retry.setRequestHeader("Content-Type", "application/octet-stream");
+        retry.send(new TextEncoder().encode(text));
+        if (retry.status >= 200 && retry.status < 300) return;
+        console.error("[Settings] Failed to save " + key + " to server: " + retry.status);
+        return;
+    }
     if (xhr.status < 200 || xhr.status >= 300) {
         console.error("[Settings] Failed to save " + key + " to server: " + xhr.status);
     }

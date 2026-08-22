@@ -477,15 +477,17 @@ if(TARGET_WEB OR EMSCRIPTEN)
     set_target_properties(ac_pc PROPERTIES SUFFIX ".js")
 endif()
 
-# Copy shader files to output directory (loaded at runtime, with embedded fallback)
-add_custom_command(TARGET ac_pc POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/shaders"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/default.vert"
-        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/default.frag"
-        "${CMAKE_BINARY_DIR}/bin/shaders/"
-    COMMENT "Copying shader files to bin/shaders/"
-)
+# Copy shader files to output directory for native builds.
+if(NOT TARGET_WEB AND NOT EMSCRIPTEN)
+    add_custom_command(TARGET ac_pc POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/shaders/default.vert"
+            "${CMAKE_CURRENT_SOURCE_DIR}/shaders/default.frag"
+            "${CMAKE_BINARY_DIR}/bin/shaders/"
+        COMMENT "Copying shader files to bin/shaders/"
+    )
+endif()
 
 # Copy SDL2.dll next to executable so users don't need it on PATH
 if(WIN32)
@@ -530,7 +532,9 @@ endif()
 # Install rules (cmake --install . --prefix <dest>)
 # =============================================================================
 install(TARGETS ac_pc RUNTIME DESTINATION bin)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/"
-    DESTINATION bin/shaders
-    FILES_MATCHING PATTERN "*.vert" PATTERN "*.frag"
-)
+if(NOT TARGET_WEB AND NOT EMSCRIPTEN)
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/"
+        DESTINATION bin/shaders
+        FILES_MATCHING PATTERN "*.vert" PATTERN "*.frag"
+    )
+endif()

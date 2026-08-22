@@ -1,7 +1,7 @@
 #include "pc_gx_internal.h"
 #include "pc_shader_seed.h"
 #ifdef __EMSCRIPTEN__
-#include "generated/pc_web_shaders.h"
+#include <emscripten.h>
 #endif
 
 int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
@@ -9,26 +9,27 @@ int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
 /* --- shader source loading --- */
 
 #ifdef __EMSCRIPTEN__
-static char* copy_shader_bytes(const unsigned char* data, unsigned int len) {
-    if (!data || len == 0) return NULL;
-    char* buf = (char*)malloc((size_t)len + 1);
-    if (!buf) return NULL;
-    memcpy(buf, data, (size_t)len);
-    buf[len] = '\0';
-    return buf;
-}
+EM_JS(char*, pc_web_shader_get_text_js, (const char* filename_ptr), {
+    const filename = UTF8ToString(filename_ptr);
+    const files = Module.acExtraFiles || {};
+    const bytes = files[filename] || files["shaders/" + filename];
+    if (!bytes) return 0;
+    const text = new TextDecoder().decode(bytes);
+    const len = lengthBytesUTF8(text) + 1;
+    const ptr = _malloc(len);
+    stringToUTF8(text, ptr, len);
+    return ptr;
+});
 
 static void preload_default_shaders(char** vs_src, char** fs_src) {
-    *vs_src = copy_shader_bytes(pc_web_default_vert_shader, pc_web_default_vert_shader_len);
-    *fs_src = copy_shader_bytes(pc_web_default_frag_shader, pc_web_default_frag_shader_len);
+    *vs_src = pc_web_shader_get_text_js("default.vert");
+    *fs_src = pc_web_shader_get_text_js("default.frag");
 
     if (*vs_src) {
-        printf("[PC/TEV] Preloaded embedded web shader: default.vert (%u bytes)\n",
-               pc_web_default_vert_shader_len);
+        printf("[PC/TEV] Loaded web shader from memory: default.vert\n");
     }
     if (*fs_src) {
-        printf("[PC/TEV] Preloaded embedded web shader: default.frag (%u bytes)\n",
-               pc_web_default_frag_shader_len);
+        printf("[PC/TEV] Loaded web shader from memory: default.frag\n");
     }
 }
 #else
@@ -62,7 +63,7 @@ static char* load_native_shader(const char* filename) {
     if (src) {
         printf("[PC/TEV] Loaded shader: %s\n", path);
     } else {
-        fprintf(stderr, "FATAL: Could not load shader: %s\n", path);
+        fprintf(stderr, "FATAL: Native shader file missing: %s\n", path);
     }
     return src;
 }
@@ -622,9 +623,9 @@ void pc_gx_tev_init(void) {
 
     if (!vs_src || !fs_src) {
 #ifdef __EMSCRIPTEN__
-        fprintf(stderr, "FATAL: Embedded web shaders are missing from memory.\n");
+        fprintf(stderr, "FATAL: Web shaders are missing from memory.\n");
 #else
-        fprintf(stderr, "FATAL: Shader files missing from shaders/ directory.\n"
+        fprintf(stderr, "FATAL: Native shader files missing from shaders/ directory.\n"
                         "Expected: shaders/default.vert and shaders/default.frag\n"
                         "Make sure shader files are next to the executable.\n");
 #endif
@@ -632,6 +633,11 @@ void pc_gx_tev_init(void) {
         free(fs_src);
         exit(1);
     }
+
+#ifdef __EMSCRIPTEN__
+    printf("[PC/TEV] Web shader memory pointers: vert=%p frag=%p\n",
+           (void*)vs_src, (void*)fs_src);
+#endif
 
     s_vertex_shader = compile_shader(GL_VERTEX_SHADER, vs_src);
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
