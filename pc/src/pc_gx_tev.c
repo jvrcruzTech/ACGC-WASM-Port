@@ -1,11 +1,29 @@
 #include "pc_gx_internal.h"
 #include "pc_shader_seed.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+EM_JS(int, pc_web_load_extra_text_file_js, (const char* path_ptr), {
+    const path = UTF8ToString(path_ptr);
+    const files = Module.acExtraFiles || {};
+    let shortPath = path;
+    if (shortPath.startsWith("shaders/")) shortPath = shortPath.slice(8);
+    const bytes = files[path] || files[shortPath];
+    if (!bytes) return 0;
+    const ptr = _malloc(bytes.length + 1);
+    HEAPU8.set(bytes, ptr);
+    HEAPU8[ptr + bytes.length] = 0;
+    return ptr;
+});
+#endif
 
 int g_pc_uber_shader_only = 0; /* --uber-shader: disable specialization */
 
 /* --- file I/O --- */
 
 static char* load_text_file(const char* path) {
+#ifdef __EMSCRIPTEN__
+    return (char*)pc_web_load_extra_text_file_js(path);
+#else
     FILE* f = fopen(path, "rb");
     if (!f) return NULL;
 
@@ -26,6 +44,7 @@ static char* load_text_file(const char* path) {
     }
     buf[read] = '\0';
     return buf;
+#endif
 }
 
 static char* load_shader(const char* filename) {
@@ -146,6 +165,9 @@ static int s_precompiling = 0;
 #define PC_GX_KEY_CACHE_MAGIC 0x41435356u /* ACSV */
 
 static void key_cache_append(const PCGXShaderKey* k) {
+#ifdef __EMSCRIPTEN__
+    (void)k;
+#else
     FILE* f = fopen(PC_GX_KEY_CACHE_FILE, "r+b");
     if (!f) {
         f = fopen(PC_GX_KEY_CACHE_FILE, "wb");
@@ -156,6 +178,7 @@ static void key_cache_append(const PCGXShaderKey* k) {
     fseek(f, 0, SEEK_END);
     fwrite(k, sizeof(*k), 1, f);
     fclose(f);
+#endif
 }
 
 static void variant_init(PCGXShaderVariant* v, GLuint prog) {
@@ -527,6 +550,7 @@ static void pc_gx_tev_precompile_cached(void) {
     }
 
     /* Local cache: configs this machine discovered beyond the seed */
+#ifndef __EMSCRIPTEN__
     FILE* f = fopen(PC_GX_KEY_CACHE_FILE, "rb");
     if (f) {
         u32 hdr[2] = { 0, 0 };
@@ -562,6 +586,7 @@ static void pc_gx_tev_precompile_cached(void) {
             }
         }
     }
+#endif
 
     s_precompiling = 0;
     if (loaded) printf("[PC/TEV] precompiled %d shader variants in %lums\n",

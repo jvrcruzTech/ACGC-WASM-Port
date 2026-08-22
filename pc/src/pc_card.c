@@ -1,13 +1,15 @@
-/* pc_card.c - memory card API → local file I/O
- * Channel 0 (Slot A) → save/card_a/
- * Channel 1 (Slot B) → save/card_b/ */
+/* pc_card.c - memory card API.
+ * Native desktop uses local file I/O.
+ * Web builds keep open files as raw byte buffers and sync those bytes directly. */
 #include "pc_platform.h"
+#ifndef __EMSCRIPTEN__
 #include <sys/stat.h>   /* mkdir (Linux), stat */
 #ifdef _WIN32
 #include <direct.h>  /* _mkdir */
 #include <windows.h>
 #else
 #include <dirent.h>
+#endif
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -42,9 +44,15 @@ typedef struct {
 #define CARD_MAX_OPEN 4
 typedef struct {
     CARDFileInfo_PC* owner;   /* NULL = slot free */
+#ifdef __EMSCRIPTEN__
+    u8*              data;
+    s32              length;
+    s32              capacity;
+#else
     FILE*            fp;
-    char             filename[64];
     char             path[512];
+#endif
+    char             filename[64];
 } CARDOpenSlot;
 
 static CARDOpenSlot card_slots[CARD_MAX_OPEN];
@@ -54,9 +62,15 @@ static CARDOpenSlot* card_slot_alloc(CARDFileInfo_PC* fi) {
     for (i = 0; i < CARD_MAX_OPEN; i++) {
         if (card_slots[i].owner == NULL) {
             card_slots[i].owner = fi;
+#ifdef __EMSCRIPTEN__
+            card_slots[i].data = NULL;
+            card_slots[i].length = 0;
+            card_slots[i].capacity = 0;
+#else
             card_slots[i].fp = NULL;
-            card_slots[i].filename[0] = '\0';
             card_slots[i].path[0] = '\0';
+#endif
+            card_slots[i].filename[0] = '\0';
             return &card_slots[i];
         }
     }
@@ -75,8 +89,16 @@ static void card_slot_free(CARDFileInfo_PC* fi) {
     int i;
     for (i = 0; i < CARD_MAX_OPEN; i++) {
         if (card_slots[i].owner == fi) {
+#ifdef __EMSCRIPTEN__
+            if (card_slots[i].data) free(card_slots[i].data);
+            card_slots[i].data = NULL;
+            card_slots[i].length = 0;
+            card_slots[i].capacity = 0;
+#endif
             card_slots[i].owner = NULL;
+#ifndef __EMSCRIPTEN__
             card_slots[i].fp = NULL;
+#endif
             return;
         }
     }
@@ -100,111 +122,114 @@ static int card_filename_safe(const char* name) {
 }
 
 #ifdef __EMSCRIPTEN__
-EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, const char* path_ptr), {
+EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned int dest_ptr, unsigned int capacity), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
-    const path = UTF8ToString(path_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/games/animal-crossing/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
+    xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
     xhr.overrideMimeType("text/plain; charset=x-user-defined");
     xhr.withCredentials = true;
     try {
         xhr.send();
     } catch (err) {
-        console.error("[AC card] fetch failed", err);
+        console.error("[Animal Crossing card] fetch failed", err);
         return 0;
     }
     if (xhr.status === 404) return 0;
     if (xhr.status !== 200) {
-        console.error("[AC card] fetch " + slot + "/" + filename + " status=" + xhr.status);
+        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
     const text = xhr.responseText || "";
-    const data = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) data[i] = text.charCodeAt(i) & 0xff;
-    FS.writeFile(path, data);
-    console.log("[AC card] loaded " + slot + "/" + filename + " (" + data.length + " bytes)");
-    return 1;
+    if (text.length > capacity) {
+        console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " too large: " + text.length + " > " + capacity);
+        return -1;
+    }
+    for (let i = 0; i < text.length; i++) {
+        HEAPU8[dest_ptr + i] = text.charCodeAt(i) & 0xff;
+    }
+    console.log("[Animal Crossing card] loaded " + slot + "/" + filename + " (" + text.length + " bytes)");
+    return text.length;
 });
 
-EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, const char* path_ptr), {
+EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned int data_ptr, unsigned int length), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
-    const path = UTF8ToString(path_ptr);
-    let data;
-    try {
-        data = FS.readFile(path);
-    } catch (err) {
-        console.error("[AC card] read local file failed", err);
-        return 0;
-    }
+    const gameId = Module.acGameId || "animal_crossing";
+    const data = HEAPU8.slice(data_ptr, data_ptr + length);
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", "/api/games/animal-crossing/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
+    xhr.open("PUT", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
     xhr.withCredentials = true;
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     try {
         xhr.send(data);
     } catch (err) {
-        console.error("[AC card] store failed", err);
+        console.error("[Animal Crossing card] store failed", err);
         return 0;
     }
     if (xhr.status < 200 || xhr.status >= 300) {
-        console.error("[AC card] store " + slot + "/" + filename + " status=" + xhr.status);
+        console.error("[Animal Crossing card] store " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    console.log("[AC card] stored " + slot + "/" + filename + " (" + data.length + " bytes)");
+    console.log("[Animal Crossing card] stored " + slot + "/" + filename + " (" + length + " bytes)");
     return 1;
 });
 
 EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
+    const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
-    xhr.open("DELETE", "/api/games/animal-crossing/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
+    xhr.open("DELETE", "/api/games/" + encodeURIComponent(gameId) + "/cards/" + slot + "/files/" + encodeURIComponent(filename), false);
     xhr.withCredentials = true;
     try {
         xhr.send();
     } catch (err) {
-        console.error("[AC card] delete failed", err);
+        console.error("[Animal Crossing card] delete failed", err);
         return 0;
     }
     if (xhr.status < 200 || xhr.status >= 300) {
-        console.error("[AC card] delete " + slot + "/" + filename + " status=" + xhr.status);
+        console.error("[Animal Crossing card] delete " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    console.log("[AC card] deleted " + slot + "/" + filename);
+    console.log("[Animal Crossing card] deleted " + slot + "/" + filename);
     return 1;
 });
 
-static int web_card_path_info(const char* path, int* chan, const char** filename) {
-    const char* slash;
-    if (!path) return 0;
-    if (strstr(path, "save/card_b/")) *chan = 1;
-    else if (strstr(path, "save/card_a/")) *chan = 0;
-    else return 0;
-    slash = strrchr(path, '/');
-    *filename = slash ? slash + 1 : path;
-    return card_filename_safe(*filename);
+static int web_card_fetch_into(s32 chan, const char* filename, u8** out_data, s32* out_len, s32 min_capacity) {
+    s32 capacity = min_capacity > 0 ? min_capacity : (1024 * 1024);
+    u8* data;
+    int len;
+    if (!card_filename_safe(filename)) return 0;
+    data = (u8*)malloc(capacity);
+    if (!data) return 0;
+    len = pc_web_card_fetch_js(chan, filename, (unsigned int)data, (unsigned int)capacity);
+    if (len <= 0) {
+        free(data);
+        return 0;
+    }
+    *out_data = data;
+    *out_len = len;
+    return 1;
 }
 
-int pc_web_card_load_path(const char* path) {
-    int chan;
-    const char* filename;
-    if (!web_card_path_info(path, &chan, &filename)) return 0;
-    return pc_web_card_fetch_js(chan, filename, path);
+int pc_web_card_load_file(s32 chan, const char* filename, u8** out_data, s32* out_len) {
+    return web_card_fetch_into(chan, filename, out_data, out_len, 0);
 }
 
-int pc_web_card_store_path(const char* path) {
-    int chan;
-    const char* filename;
-    if (!web_card_path_info(path, &chan, &filename)) return 0;
-    return pc_web_card_store_js(chan, filename, path);
+int pc_web_card_store_file(s32 chan, const char* filename, const u8* data, s32 len) {
+    if (!card_filename_safe(filename) || !data || len < 0) return 0;
+    return pc_web_card_store_js(chan, filename, (unsigned int)data, (unsigned int)len);
 }
 #endif
 
 #define CARD_SECTOR_SIZE 8192
 
 static void ensure_dirs(void) {
+#ifdef __EMSCRIPTEN__
+    /* Web builds do not mount or create a save filesystem. */
+#else
 #ifdef _WIN32
     _mkdir("save");
     _mkdir("save/card_a");
@@ -213,6 +238,7 @@ static void ensure_dirs(void) {
     mkdir("save", 0755);
     mkdir("save/card_a", 0755);
     mkdir("save/card_b", 0755);
+#endif
 #endif
 }
 
@@ -239,12 +265,13 @@ s32 CARDUnmount(s32 chan) {
 }
 
 s32 CARDOpen(s32 chan, const char* fileName, CARDFileInfo_PC* fileInfo) {
+#ifndef __EMSCRIPTEN__
     char path[512];
+#endif
     CARDOpenSlot* slot;
     if (!card_filename_safe(fileName)) return CARD_RESULT_NAMETOOLONG;
+#ifndef __EMSCRIPTEN__
     snprintf(path, sizeof(path), "%s/%s", get_card_dir(chan), fileName);
-#ifdef __EMSCRIPTEN__
-    pc_web_card_fetch_js(chan, fileName, path);
 #endif
 
     fileInfo->chan = chan;
@@ -255,6 +282,15 @@ s32 CARDOpen(s32 chan, const char* fileName, CARDFileInfo_PC* fileInfo) {
 
     strncpy(slot->filename, fileName, sizeof(slot->filename) - 1);
     slot->filename[sizeof(slot->filename) - 1] = '\0';
+#ifdef __EMSCRIPTEN__
+    if (!web_card_fetch_into(chan, fileName, &slot->data, &slot->length, 0)) {
+        card_slot_free(fileInfo);
+        return CARD_RESULT_NOFILE;
+    }
+    slot->capacity = slot->length;
+    fileInfo->length = slot->length;
+    return CARD_RESULT_READY;
+#else
     strncpy(slot->path, path, sizeof(slot->path) - 1);
     slot->path[sizeof(slot->path) - 1] = '\0';
     slot->fp = fopen(path, "r+b");
@@ -266,23 +302,30 @@ s32 CARDOpen(s32 chan, const char* fileName, CARDFileInfo_PC* fileInfo) {
     fileInfo->length = (s32)ftell(slot->fp);
     fseek(slot->fp, 0, SEEK_SET);
     return CARD_RESULT_READY;
+#endif
 }
 
 s32 CARDClose(CARDFileInfo_PC* fileInfo) {
+#ifndef __EMSCRIPTEN__
     CARDOpenSlot* slot = card_slot_find(fileInfo);
     if (slot && slot->fp) {
         fclose(slot->fp);
         slot->fp = NULL;
     }
+#endif
     card_slot_free(fileInfo);
     return CARD_RESULT_READY;
 }
 
 s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileInfo) {
+#ifndef __EMSCRIPTEN__
     char path[512];
+#endif
     CARDOpenSlot* slot;
     if (!card_filename_safe(fileName)) return CARD_RESULT_NAMETOOLONG;
+#ifndef __EMSCRIPTEN__
     snprintf(path, sizeof(path), "%s/%s", get_card_dir(chan), fileName);
+#endif
 
     fileInfo->chan = chan;
     fileInfo->offset = 0;
@@ -293,6 +336,17 @@ s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileIn
 
     strncpy(slot->filename, fileName, sizeof(slot->filename) - 1);
     slot->filename[sizeof(slot->filename) - 1] = '\0';
+#ifdef __EMSCRIPTEN__
+    slot->data = (u8*)calloc(1, size);
+    if (!slot->data) { card_slot_free(fileInfo); return CARD_RESULT_IOERROR; }
+    slot->length = size;
+    slot->capacity = size;
+    if (!pc_web_card_store_js(chan, fileName, (unsigned int)slot->data, (unsigned int)slot->length)) {
+        card_slot_free(fileInfo);
+        return CARD_RESULT_IOERROR;
+    }
+    return CARD_RESULT_READY;
+#else
     strncpy(slot->path, path, sizeof(slot->path) - 1);
     slot->path[sizeof(slot->path) - 1] = '\0';
 
@@ -312,6 +366,7 @@ s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileIn
 #endif
 
     return CARD_RESULT_READY;
+#endif
 }
 
 s32 CARDCreateAsync(s32 chan, const char* fileName, u32 size, void* fileInfo, void* callback) {
@@ -322,10 +377,17 @@ s32 CARDCreateAsync(s32 chan, const char* fileName, u32 size, void* fileInfo, vo
 
 s32 CARDRead(CARDFileInfo_PC* fileInfo, void* buf, s32 length, s32 offset) {
     CARDOpenSlot* slot = card_slot_find(fileInfo);
+#ifdef __EMSCRIPTEN__
+    if (!slot || !slot->data) return CARD_RESULT_NOFILE;
+    if (offset < 0 || length < 0 || offset + length > slot->length) return CARD_RESULT_IOERROR;
+    memcpy(buf, slot->data + offset, length);
+    return CARD_RESULT_READY;
+#else
     if (!slot || !slot->fp) return CARD_RESULT_NOFILE;
     fseek(slot->fp, offset, SEEK_SET);
     if ((s32)fread(buf, 1, length, slot->fp) != length) return CARD_RESULT_IOERROR;
     return CARD_RESULT_READY;
+#endif
 }
 
 s32 CARDReadAsync(void* fileInfo, void* buf, s32 length, s32 offset, void* callback) {
@@ -336,14 +398,32 @@ s32 CARDReadAsync(void* fileInfo, void* buf, s32 length, s32 offset, void* callb
 
 s32 CARDWrite(CARDFileInfo_PC* fileInfo, const void* buf, s32 length, s32 offset) {
     CARDOpenSlot* slot = card_slot_find(fileInfo);
+#ifdef __EMSCRIPTEN__
+    s32 needed;
+    if (!slot || !slot->data) return CARD_RESULT_NOFILE;
+    if (offset < 0 || length < 0) return CARD_RESULT_IOERROR;
+    needed = offset + length;
+    if (needed > slot->capacity) {
+        u8* grown = (u8*)realloc(slot->data, needed);
+        if (!grown) return CARD_RESULT_IOERROR;
+        if (needed > slot->length) memset(grown + slot->length, 0, needed - slot->length);
+        slot->data = grown;
+        slot->capacity = needed;
+    }
+    memcpy(slot->data + offset, buf, length);
+    if (needed > slot->length) slot->length = needed;
+    fileInfo->length = slot->length;
+    if (!pc_web_card_store_js(fileInfo->chan, slot->filename, (unsigned int)slot->data, (unsigned int)slot->length)) {
+        return CARD_RESULT_IOERROR;
+    }
+    return CARD_RESULT_READY;
+#else
     if (!slot || !slot->fp) return CARD_RESULT_NOFILE;
     fseek(slot->fp, offset, SEEK_SET);
     if ((s32)fwrite(buf, 1, length, slot->fp) != length) return CARD_RESULT_IOERROR;
     fflush(slot->fp);
-#ifdef __EMSCRIPTEN__
-    pc_web_card_store_js(fileInfo->chan, slot->filename, slot->path);
-#endif
     return CARD_RESULT_READY;
+#endif
 }
 
 s32 CARDWriteAsync(void* fileInfo, const void* buf, s32 length, s32 offset, void* callback) {
@@ -353,11 +433,14 @@ s32 CARDWriteAsync(void* fileInfo, const void* buf, s32 length, s32 offset, void
 }
 
 s32 CARDDelete(s32 chan, const char* fileName) {
+#ifndef __EMSCRIPTEN__
     char path[512];
+#endif
     if (!card_filename_safe(fileName)) return CARD_RESULT_NAMETOOLONG;
+#ifndef __EMSCRIPTEN__
     snprintf(path, sizeof(path), "%s/%s", get_card_dir(chan), fileName);
     remove(path);
-#ifdef __EMSCRIPTEN__
+#else
     pc_web_card_delete_js(chan, fileName);
 #endif
     return CARD_RESULT_READY;
@@ -428,13 +511,22 @@ s32 CARDSetStatusAsync(s32 chan, s32 fileNo, void* stat, void* callback) {
 }
 
 s32 CARDRename(s32 chan, const char* oldName, const char* newName) {
+#ifndef __EMSCRIPTEN__
     char oldPath[512], newPath[512];
+#else
+    u8* data = NULL;
+    s32 len = 0;
+#endif
     if (!card_filename_safe(oldName) || !card_filename_safe(newName)) return CARD_RESULT_NAMETOOLONG;
+#ifndef __EMSCRIPTEN__
     snprintf(oldPath, sizeof(oldPath), "%s/%s", get_card_dir(chan), oldName);
     snprintf(newPath, sizeof(newPath), "%s/%s", get_card_dir(chan), newName);
     rename(oldPath, newPath);
-#ifdef __EMSCRIPTEN__
-    pc_web_card_store_js(chan, newName, newPath);
+#else
+    if (web_card_fetch_into(chan, oldName, &data, &len, 0)) {
+        pc_web_card_store_js(chan, newName, (unsigned int)data, (unsigned int)len);
+        free(data);
+    }
     pc_web_card_delete_js(chan, oldName);
 #endif
     return CARD_RESULT_READY;
@@ -459,12 +551,18 @@ int pc_card_scan_for_gci(s32 chan, char* out_path, int out_size) {
 
 #ifdef __EMSCRIPTEN__
     {
-        char path[512];
-        snprintf(path, sizeof(path), "%s/DobutsunomoriP_MURA.gci", dir);
-        pc_web_card_fetch_js(chan, "DobutsunomoriP_MURA.gci", path);
+        u8* data = NULL;
+        s32 len = 0;
+        if (web_card_fetch_into(chan, "DobutsunomoriP_MURA.gci", &data, &len, 0)) {
+            int valid = len >= 4 && data[0] == 'G' && data[1] == 'A' && data[2] == 'F';
+            free(data);
+            if (valid) {
+                snprintf(out_path, out_size, "%s/DobutsunomoriP_MURA.gci", dir);
+                return 1;
+            }
+        }
     }
-#endif
-
+#else
 #ifdef _WIN32
     WIN32_FIND_DATAA fd;
     HANDLE h;
@@ -520,6 +618,7 @@ int pc_card_scan_for_gci(s32 chan, char* out_path, int out_size) {
         }
     }
     closedir(d);
+#endif
 #endif
 
     return 0;

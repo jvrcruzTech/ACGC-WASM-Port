@@ -26,9 +26,12 @@ static u32 le32(const u8* p) {
 #define CISO_HDR_SIZE 0x8000
 #define CISO_MAGIC    0x4F534943 /* "CISO" as LE u32 */
 #define CISO_MAP_OFF  8
+#define GC_DISC_SIZE  1459978240u
 
 typedef struct {
+#ifndef __EMSCRIPTEN__
     FILE* fp;
+#endif
 #ifdef __EMSCRIPTEN__
     char url[512];
     int is_remote;
@@ -59,32 +62,22 @@ static int g_fst_file_count = 0;
 
 /* ---- disc I/O ---- */
 #ifdef __EMSCRIPTEN__
+EM_JS(unsigned int, pc_web_rom_size_js, (void), {
+    const romBytes = Module.acRomBytes;
+    return romBytes ? romBytes.length : 0;
+});
+
 EM_JS(int, pc_web_rom_read_js, (const char* url_ptr, unsigned int offset, unsigned int size, unsigned int dest_ptr), {
-    const url = UTF8ToString(url_ptr);
-    const end = offset + size - 1;
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", url, false);
-    xhr.overrideMimeType("text/plain; charset=x-user-defined");
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("Range", "bytes=" + offset + "-" + end);
-    try {
-        xhr.send();
-    } catch (err) {
-        console.error("[AC ROM] fetch failed", err);
+    const romBytes = Module.acRomBytes;
+    if (!romBytes) {
+        console.error("[Animal Crossing ROM] no in-memory ROM bytes are available");
         return 0;
     }
-    if (xhr.status !== 206 && xhr.status !== 200) {
-        console.error("[AC ROM] fetch status=" + xhr.status + " range=bytes=" + offset + "-" + end);
+    if (offset + size > romBytes.length) {
+        console.error("[Animal Crossing ROM] memory short read offset=" + offset + " size=" + size + " romBytes=" + romBytes.length);
         return 0;
     }
-    const text = xhr.responseText || "";
-    if (text.length < size) {
-        console.error("[AC ROM] short read bytes=" + text.length + " wanted=" + size);
-        return 0;
-    }
-    for (let i = 0; i < size; i++) {
-        HEAPU8[dest_ptr + i] = text.charCodeAt(i) & 0xff;
-    }
+    HEAPU8.set(romBytes.subarray(offset, offset + size), dest_ptr);
     return 1;
 });
 
@@ -94,7 +87,7 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
     if (!df->is_remote || size == 0) return 0;
 
     if (g_pc_verbose) {
-        printf("[PC] ROM fetch: %s bytes=%lu-%lu\n",
+        printf("[PC] ROM read: %s bytes=%lu-%lu\n",
                df->url,
                (unsigned long)offset,
                (unsigned long)(offset + size - 1));
@@ -113,52 +106,68 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
 
 static int disc_open(DiscFile* df, const char* path) {
     u8 hdr[CISO_HDR_SIZE];
+#ifdef __EMSCRIPTEN__
+    u32 rom_size = pc_web_rom_size_js();
+#endif
 
     memset(df, 0, sizeof(*df));
 #ifdef __EMSCRIPTEN__
-    if (path[0] == '/') {
-        snprintf(df->url, sizeof(df->url), "%s", path);
-        df->is_remote = 1;
-        if (g_pc_verbose) printf("[PC] Opening remote ROM: %s\n", df->url);
-    } else
-#endif
+    snprintf(df->url, sizeof(df->url), "%s", path ? path : "(memory)");
+    df->is_remote = 1;
+    if (g_pc_verbose) printf("[PC] Opening in-memory web ROM: %s (%lu bytes)\n",
+                             df->url, (unsigned long)rom_size);
+    if (rom_size < 0x440) {
+        if (g_pc_verbose) printf("[PC] Web ROM is too small to be a GC image\n");
+        return 0;
+    }
+#else
     df->fp = fopen(path, "rb");
-    if (
-#ifdef __EMSCRIPTEN__
-        !df->is_remote &&
+    if (!df->fp) return 0;
 #endif
-        !df->fp) return 0;
 
     /* try CISO */
-    if (
 #ifdef __EMSCRIPTEN__
-        (df->is_remote ? remote_read(df, 0, hdr, CISO_HDR_SIZE) :
+    if (remote_read(df, 0, hdr, CISO_HDR_SIZE) && le32(hdr) == CISO_MAGIC) {
+#else
+    if (fread(hdr, 1, CISO_HDR_SIZE, df->fp) == CISO_HDR_SIZE && le32(hdr) == CISO_MAGIC) {
 #endif
-        fread(hdr, 1, CISO_HDR_SIZE, df->fp) == CISO_HDR_SIZE
-#ifdef __EMSCRIPTEN__
-        )
-#endif
-        &&
-        le32(hdr) == CISO_MAGIC) {
-        df->block_size = le32(hdr + 4);
+        u32 block_size_le = le32(hdr + 4);
+        u32 block_size_be = be32(hdr + 4);
+        df->block_size = block_size_le;
+        if ((df->block_size < 0x8000 || (df->block_size & (df->block_size - 1)) != 0) &&
+            block_size_be >= 0x8000 && (block_size_be & (block_size_be - 1)) == 0) {
+            df->block_size = block_size_be;
+        }
         if (df->block_size > 0) {
-            int i, phys = 0;
-            df->num_blocks = CISO_HDR_SIZE - CISO_MAP_OFF;
+            int i, phys = 0, map_blocks = CISO_HDR_SIZE - CISO_MAP_OFF;
+            u32 logical_blocks = (GC_DISC_SIZE + df->block_size - 1) / df->block_size;
+            df->num_blocks = logical_blocks < (u32)map_blocks ? (int)logical_blocks : map_blocks;
             df->block_phys = (int*)malloc(df->num_blocks * sizeof(int));
+            if (!df->block_phys) return 0;
             for (i = 0; i < df->num_blocks; i++)
                 df->block_phys[i] = hdr[CISO_MAP_OFF + i] ? phys++ : -1;
             df->is_ciso = 1;
+            if (g_pc_verbose) {
+                printf("[PC] CISO: block_size=%lu blocks=%d stored_blocks=%d endian=%s\n",
+                       (unsigned long)df->block_size,
+                       df->num_blocks,
+                       phys,
+                       df->block_size == block_size_be ? "be" : "le");
+            }
             return 1;
         }
     }
 
     /* plain ISO/GCM */
     df->is_ciso = 0;
+    if (g_pc_verbose) printf("[PC] ROM is plain ISO/GCM\n");
     return 1;
 }
 
 static void disc_close(DiscFile* df) {
+#ifndef __EMSCRIPTEN__
     if (df->fp) fclose(df->fp);
+#endif
     if (df->block_phys) free(df->block_phys);
     memset(df, 0, sizeof(*df));
 }
@@ -170,8 +179,12 @@ static int disc_read(DiscFile* df, u32 offset, void* dest, u32 size) {
     }
 #endif
     if (!df->is_ciso) {
+#ifdef __EMSCRIPTEN__
+        return df->is_remote ? remote_read(df, offset, dest, size) : 0;
+#else
         fseek(df->fp, (long)offset, SEEK_SET);
         return (u32)fread(dest, 1, size, df->fp) == size;
+#endif
     }
 
     {
@@ -193,8 +206,12 @@ static int disc_read(DiscFile* df, u32 offset, void* dest, u32 size) {
                 } else
 #endif
                 {
+#ifdef __EMSCRIPTEN__
+                    return 0;
+#else
                     fseek(df->fp, (long)phys, SEEK_SET);
                     if ((u32)fread(out, 1, chunk, df->fp) != chunk) return 0;
+#endif
                 }
             }
 
@@ -255,13 +272,17 @@ static u8* yaz0_decode(const u8* src, u32 src_size, u32* out_size) {
 
 static int gcm_verify(DiscFile* df) {
     u8 buf[4];
-    disc_read(df, 0x1C, buf, 4);
+    if (!disc_read(df, 0x1C, buf, 4)) return 0;
+    if (g_pc_verbose && be32(buf) != GC_MAGIC) {
+        printf("[PC] GC magic mismatch at 0x1C: %02X %02X %02X %02X\n",
+               buf[0], buf[1], buf[2], buf[3]);
+    }
     return be32(buf) == GC_MAGIC;
 }
 
 static u32 gcm_dol_offset_read(DiscFile* df) {
     u8 buf[4];
-    disc_read(df, 0x420, buf, 4);
+    if (!disc_read(df, 0x420, buf, 4)) return 0;
     return be32(buf);
 }
 
@@ -270,7 +291,7 @@ static u32 gcm_dol_size_calc(DiscFile* df, u32 dol_off) {
     u32 max_end = 0;
     int i;
 
-    disc_read(df, dol_off, hdr, 0xE4);
+    if (!disc_read(df, dol_off, hdr, 0xE4)) return 0;
 
     for (i = 0; i < 7; i++) {
         u32 off = be32(hdr + i * 4);
@@ -297,12 +318,18 @@ static void build_fst_table(DiscFile* df) {
 
     g_fst_file_count = 0;
 
-    disc_read(df, 0x424, buf, 4);
+    if (!disc_read(df, 0x424, buf, 4)) return;
     fst_off = be32(buf);
 
-    disc_read(df, fst_off + 8, buf, 4);
+    if (!disc_read(df, fst_off + 8, buf, 4)) return;
     num_ent = be32(buf);
     str_tbl = fst_off + num_ent * 12;
+
+    if (num_ent == 0 || num_ent > MAX_FST_FILES * 4) {
+        if (g_pc_verbose) printf("[PC] FST: invalid entry count %lu at 0x%lX\n",
+                                 (unsigned long)num_ent, (unsigned long)fst_off);
+        return;
+    }
 
     /* push root */
     dir_stack[0].next_entry = num_ent;
@@ -317,9 +344,9 @@ static void build_fst_table(DiscFile* df) {
         while (stack_depth > 0 && i >= dir_stack[stack_depth - 1].next_entry)
             stack_depth--;
 
-        disc_read(df, fst_off + i * 12, buf, 12);
+        if (!disc_read(df, fst_off + i * 12, buf, 12)) return;
         noff = ((u32)buf[1] << 16) | ((u32)buf[2] << 8) | buf[3];
-        disc_read(df, str_tbl + noff, name, 127);
+        if (!disc_read(df, str_tbl + noff, name, 127)) return;
         name[127] = '\0';
 
         if (buf[0] == 1) {
@@ -355,9 +382,10 @@ static void build_fst_table(DiscFile* df) {
     if (g_pc_verbose) {
         printf("[PC] FST: %d files indexed\n", g_fst_file_count);
         for (int fi = 0; fi < g_fst_file_count; fi++)
-            printf("[PC] FST[%d]: %s (%u bytes @ 0x%X)\n", fi,
-                   g_fst_files[fi].path, g_fst_files[fi].file_size,
-                   g_fst_files[fi].disc_offset);
+            printf("[PC] FST[%d]: %s (%lu bytes @ 0x%lX)\n", fi,
+                   g_fst_files[fi].path,
+                   (unsigned long)g_fst_files[fi].file_size,
+                   (unsigned long)g_fst_files[fi].disc_offset);
     }
 }
 
@@ -378,7 +406,7 @@ static int str_ends_ci(const char* s, const char* suffix) {
 
 static int find_disc_image(char* out_path, int out_sz) {
 #ifdef __EMSCRIPTEN__
-    snprintf(out_path, out_sz, "%s", "/rom/ac");
+    snprintf(out_path, out_sz, "%s", "/rom/animal_crossing");
     if (g_pc_verbose) printf("[PC] Web ROM path: %s\n", out_path);
     return 1;
 #else
@@ -435,6 +463,9 @@ int pc_disc_init(void) {
     /* cache DOL info */
     g_dol_offset = gcm_dol_offset_read(&g_disc);
     g_dol_size = gcm_dol_size_calc(&g_disc, g_dol_offset);
+    if (g_pc_verbose) printf("[PC] DOL metadata: offset=0x%lX size=%lu\n",
+                             (unsigned long)g_dol_offset,
+                             (unsigned long)g_dol_size);
 
     /* build FST lookup table */
     build_fst_table(&g_disc);
@@ -472,6 +503,10 @@ int pc_disc_read(u32 offset, void* dest, u32 size) {
 u8* pc_disc_extract_dol(void) {
     u8* buf;
     if (!g_disc_open) return NULL;
+    if (g_dol_offset == 0 || g_dol_size == 0) {
+        if (g_pc_verbose) printf("[PC] DOL metadata is invalid\n");
+        return NULL;
+    }
     buf = (u8*)malloc(g_dol_size);
     if (!buf) return NULL;
     if (!disc_read(&g_disc, g_dol_offset, buf, g_dol_size)) {
@@ -479,7 +514,9 @@ u8* pc_disc_extract_dol(void) {
         return NULL;
     }
     if (g_pc_verbose)
-        printf("[PC] DOL: %u bytes (offset 0x%X)\n", g_dol_size, g_dol_offset);
+        printf("[PC] DOL: %lu bytes (offset 0x%lX)\n",
+               (unsigned long)g_dol_size,
+               (unsigned long)g_dol_offset);
     return buf;
 }
 
@@ -491,6 +528,9 @@ u8* pc_disc_extract_rel(void) {
         if (g_pc_verbose) printf("[PC] foresta.rel.szs not found in disc FST\n");
         return NULL;
     }
+    if (g_pc_verbose) printf("[PC] foresta.rel.szs: %lu bytes @ 0x%lX\n",
+                             (unsigned long)sz,
+                             (unsigned long)off);
 
     raw = (u8*)malloc(sz);
     if (!raw) return NULL;
@@ -509,11 +549,14 @@ u8* pc_disc_extract_rel(void) {
             return NULL;
         }
         if (g_pc_verbose)
-            printf("[PC] REL: %u bytes (Yaz0: %u -> %u)\n", dec_sz, sz, dec_sz);
+            printf("[PC] REL: %lu bytes (Yaz0: %lu -> %lu)\n",
+                   (unsigned long)dec_sz,
+                   (unsigned long)sz,
+                   (unsigned long)dec_sz);
         return dec;
     }
 
-    if (g_pc_verbose) printf("[PC] REL: %u bytes (raw)\n", sz);
+    if (g_pc_verbose) printf("[PC] REL: %lu bytes (raw)\n", (unsigned long)sz);
     return raw;
 }
 

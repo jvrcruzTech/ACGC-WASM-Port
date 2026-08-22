@@ -277,7 +277,7 @@ static int pc_parse_rain_intensity(const char* text) {
 int main(int argc, char* argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
-    WEB_LOG("[AC native] main entered argc=%d", argc);
+    WEB_LOG("[Animal Crossing native] main entered argc=%d", argc);
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: AnimalCrossing [options]\n");
@@ -406,21 +406,21 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    WEB_LOG("[AC native] loading settings");
+    WEB_LOG("[Animal Crossing native] loading settings");
     SDL_SetMainReady();
     pc_settings_load();
     pc_keybindings_load();
-    WEB_LOG("[AC native] initializing platform");
+    WEB_LOG("[Animal Crossing native] initializing platform");
     pc_platform_init();
-    WEB_LOG("[AC native] initializing ROM reader");
+    WEB_LOG("[Animal Crossing native] initializing ROM reader");
     if (!pc_disc_init()) {
 #ifdef __EMSCRIPTEN__
-        fprintf(stderr, "[PC] Failed to open /rom/ac. Check the /rom/ac request status and CISO_PATH on the backend.\n");
+        fprintf(stderr, "[PC] Failed to open /rom/animal_crossing. Check the /rom/animal_crossing request status and CISO_PATH on the backend.\n");
 #else
         fprintf(stderr, "[PC] Failed to open a disc image from ., orig, or rom.\n");
 #endif
     }
-    WEB_LOG("[AC native] initializing assets");
+    WEB_LOG("[Animal Crossing native] initializing assets");
     if (!pc_assets_init()) {
         const char* msg =
             "No game data found.\n\n"
@@ -433,7 +433,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    WEB_LOG("[AC native] entering game boot");
+    WEB_LOG("[Animal Crossing native] entering game boot");
     ac_entry();                         /* sets HotStartEntry = &entry */
     boot_main(argc, (const char**)argv); /* full init → HotStartEntry → game loop */
 

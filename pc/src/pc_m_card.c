@@ -85,8 +85,8 @@ static char l_card_b_gci_path[300] = {0};      /* Path to the Card B GCI file, i
 /* External: scan card_b/ for valid AC GCI file (defined in pc_card.c) */
 extern int pc_card_scan_for_gci(int chan, char* out_path, int out_size);
 #ifdef __EMSCRIPTEN__
-extern int pc_web_card_load_path(const char* path);
-extern int pc_web_card_store_path(const char* path);
+extern int pc_web_card_load_file(s32 chan, const char* filename, u8** out_data, s32* out_len);
+extern int pc_web_card_store_file(s32 chan, const char* filename, const u8* data, s32 len);
 #endif
 
 /* External: functions from decomp used in mCD_toNextLand */
@@ -206,6 +206,9 @@ static void put_be16(u8* dst, u16 val) {
 
 /* rotate backups: .bak3→delete, .bak2→.bak3, .bak1→.bak2, current→.bak1 */
 static void pc_save_rotate_backups(const char* base_path) {
+#ifdef __EMSCRIPTEN__
+    (void)base_path;
+#else
     char older[300], newer[300];
     int i;
     struct stat st;
@@ -226,9 +229,13 @@ static void pc_save_rotate_backups(const char* base_path) {
         remove(newer);
         rename(base_path, newer);
     }
+#endif
 }
 
 static void pc_ensure_save_dirs(void) {
+#ifdef __EMSCRIPTEN__
+    /* Web saves are server-backed raw bytes. */
+#else
 #ifdef _WIN32
     _mkdir(PC_SAVE_DIR);
     _mkdir(PC_CARD_A_DIR);
@@ -237,6 +244,7 @@ static void pc_ensure_save_dirs(void) {
     mkdir(PC_SAVE_DIR, 0755);
     mkdir(PC_CARD_A_DIR, 0755);
     mkdir(PC_CARD_B_DIR, 0755);
+#endif
 #endif
 }
 
@@ -300,7 +308,9 @@ static int pc_save_write_gci(void) {
 }
 
 static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
+#ifndef __EMSCRIPTEN__
     FILE* fp;
+#endif
     u8* file_data;
     CARDDir dir_hdr;
     Save_t* save_copy;
@@ -309,7 +319,9 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
 
     if (!pc_save_ready) return TRUE;
 
+#ifndef __EMSCRIPTEN__
     pc_ensure_save_dirs();
+#endif
 
     Save_Get(save_exist) = TRUE;
     Save_Get(save_check).version = mFRm_VERSION;
@@ -410,7 +422,28 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
     put_be16((u8*)&dir_hdr.length, (u16)(GCI_FILE_DATA_SIZE / GCI_SECTOR_SIZE));
     put_be32((u8*)&dir_hdr.commentAddr, 0);
 
-    /* write temp file → rotate backups → rename */
+#ifdef __EMSCRIPTEN__
+    {
+        u8* gci_bytes = (u8*)malloc(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE);
+        if (!gci_bytes) {
+            free(file_data);
+            return FALSE;
+        }
+        memcpy(gci_bytes, &dir_hdr, GCI_HEADER_SIZE);
+        memcpy(gci_bytes + GCI_HEADER_SIZE, file_data, GCI_FILE_DATA_SIZE);
+        if (!pc_web_card_store_file(0, PC_GCI_FILENAME, gci_bytes, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
+            OSReport("[PC] GCI save: web byte upload failed\n");
+            free(gci_bytes);
+            free(file_data);
+            return FALSE;
+        }
+        free(gci_bytes);
+        free(file_data);
+        OSReport("[PC] GCI save: uploaded %s as raw bytes\n", PC_GCI_FILENAME);
+        return TRUE;
+    }
+#else
+    /* write temp file -> rotate backups -> rename */
     fp = fopen(tmp_path, "wb");
     if (!fp) {
         OSReport("[PC] GCI save: failed to open temp file '%s'\n", tmp_path);
@@ -444,16 +477,16 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         return FALSE;
     }
 
-#ifdef __EMSCRIPTEN__
-    pc_web_card_store_path(gci_path);
-#endif
     OSReport("[PC] GCI save: written successfully to %s (backups rotated)\n", gci_path);
     return TRUE;
+#endif
 }
 
 /* Read a GCI file into common_data (for home town / Card A) */
 static int pc_save_read_gci(const char* path) {
+#ifndef __EMSCRIPTEN__
     FILE* fp;
+#endif
     CARDDir dir_hdr;
     u8* file_data;
     Save_t* save_src;
@@ -461,8 +494,26 @@ static int pc_save_read_gci(const char* path) {
     long file_size;
 
 #ifdef __EMSCRIPTEN__
-    pc_web_card_load_path(path);
-#endif
+    u8* gci_bytes = NULL;
+    s32 gci_len = 0;
+    const char* slash = strrchr(path, '/');
+    const char* filename = slash ? slash + 1 : path;
+    if (!pc_web_card_load_file(strstr(path, PC_CARD_B_DIR) ? 1 : 0, filename, &gci_bytes, &gci_len)) {
+        OSReport("[PC] GCI: web load '%s' failed\n", filename);
+        return FALSE;
+    }
+    if (gci_len < (s32)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
+        OSReport("[PC] GCI: web load '%s' too small: %d bytes\n", filename, gci_len);
+        free(gci_bytes);
+        return FALSE;
+    }
+    memcpy(&dir_hdr, gci_bytes, GCI_HEADER_SIZE);
+    file_size = gci_len;
+    OSReport("[PC] GCI: loaded '%s' from web, size = %ld (0x%lX), expected %ld (0x%lX)\n",
+             filename, file_size, (unsigned long)file_size,
+             (long)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE),
+             (unsigned long)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE));
+#else
     fp = fopen(path, "rb");
     if (!fp) {
         OSReport("[PC] GCI: fopen('%s') failed\n", path);
@@ -482,6 +533,7 @@ static int pc_save_read_gci(const char* path) {
         fclose(fp);
         return FALSE;
     }
+#endif
 
     OSReport("[PC] GCI: gameName='%c%c%c%c' company='%c%c' fileName='%.32s'\n",
              dir_hdr.gameName[0], dir_hdr.gameName[1],
@@ -491,17 +543,29 @@ static int pc_save_read_gci(const char* path) {
     if (memcmp(dir_hdr.gameName, "GAF", 3) != 0) {
         OSReport("[PC] GCI: not an Animal Crossing save (expected GAFx, got '%.4s')\n",
                  dir_hdr.gameName);
+#ifdef __EMSCRIPTEN__
+        free(gci_bytes);
+#else
         fclose(fp);
+#endif
         return FALSE;
     }
 
     file_data = (u8*)malloc(GCI_FILE_DATA_SIZE);
     if (!file_data) {
         OSReport("[PC] GCI: malloc(%u) failed\n", (unsigned)GCI_FILE_DATA_SIZE);
+#ifdef __EMSCRIPTEN__
+        free(gci_bytes);
+#else
         fclose(fp);
+#endif
         return FALSE;
     }
 
+#ifdef __EMSCRIPTEN__
+    memcpy(file_data, gci_bytes + GCI_HEADER_SIZE, GCI_FILE_DATA_SIZE);
+    free(gci_bytes);
+#else
     if (fread(file_data, GCI_FILE_DATA_SIZE, 1, fp) != 1) {
         OSReport("[PC] GCI: failed to read %u bytes of file data (file may be too small)\n",
                  (unsigned)GCI_FILE_DATA_SIZE);
@@ -510,6 +574,7 @@ static int pc_save_read_gci(const char* path) {
         return FALSE;
     }
     fclose(fp);
+#endif
 
     save_src = (Save_t*)(file_data + GCI_SAVE_MAIN_OFFSET);
     pc_save_bswap_verify_roundtrip((const u8*)save_src, sizeof(Save_t));
@@ -574,28 +639,59 @@ static int pc_save_read_gci(const char* path) {
  * Also loads ARAM blocks (mail/original/diary) into the l_keep* buffers.
  * Returns TRUE on success. */
 static int pc_save_read_gci_to_keep(const char* path) {
+#ifndef __EMSCRIPTEN__
     FILE* fp;
+#endif
     CARDDir dir_hdr;
     u8* file_data;
     Save_t* save_src;
     u32 offset;
 
 #ifdef __EMSCRIPTEN__
-    pc_web_card_load_path(path);
-#endif
+    u8* gci_bytes = NULL;
+    s32 gci_len = 0;
+    const char* slash = strrchr(path, '/');
+    const char* filename = slash ? slash + 1 : path;
+    if (!pc_web_card_load_file(1, filename, &gci_bytes, &gci_len)) return FALSE;
+    if (gci_len < (s32)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
+        free(gci_bytes);
+        return FALSE;
+    }
+    memcpy(&dir_hdr, gci_bytes, GCI_HEADER_SIZE);
+#else
     fp = fopen(path, "rb");
     if (!fp) return FALSE;
 
     if (fread(&dir_hdr, GCI_HEADER_SIZE, 1, fp) != 1) { fclose(fp); return FALSE; }
-    if (memcmp(dir_hdr.gameName, "GAF", 3) != 0) { fclose(fp); return FALSE; }
+#endif
+    if (memcmp(dir_hdr.gameName, "GAF", 3) != 0) {
+#ifdef __EMSCRIPTEN__
+        free(gci_bytes);
+#else
+        fclose(fp);
+#endif
+        return FALSE;
+    }
 
     file_data = (u8*)malloc(GCI_FILE_DATA_SIZE);
-    if (!file_data) { fclose(fp); return FALSE; }
+    if (!file_data) {
+#ifdef __EMSCRIPTEN__
+        free(gci_bytes);
+#else
+        fclose(fp);
+#endif
+        return FALSE;
+    }
 
+#ifdef __EMSCRIPTEN__
+    memcpy(file_data, gci_bytes + GCI_HEADER_SIZE, GCI_FILE_DATA_SIZE);
+    free(gci_bytes);
+#else
     if (fread(file_data, GCI_FILE_DATA_SIZE, 1, fp) != 1) {
         fclose(fp); free(file_data); return FALSE;
     }
     fclose(fp);
+#endif
 
     /* Load Save_t into l_keepSave (try main, fall back to backup) */
     save_src = (Save_t*)(file_data + GCI_SAVE_MAIN_OFFSET);
@@ -656,6 +752,10 @@ static int pc_save_read_gci_to_keep(const char* path) {
 
 /* Migrate legacy flat save/ layout to save/card_a/ */
 static void pc_save_migrate_legacy(void) {
+#ifdef __EMSCRIPTEN__
+    /* Web saves are one server-backed raw GCI byte object, not a filesystem tree. */
+    return;
+#else
     struct stat st_legacy, st_new;
 
     if (stat(PC_GCI_PATH_LEGACY, &st_legacy) == 0 &&
@@ -687,9 +787,18 @@ static void pc_save_migrate_legacy(void) {
 
         OSReport("[PC] Migration complete\n");
     }
+#endif
 }
 
 static int pc_save_scan_gci_dir(void) {
+#ifdef __EMSCRIPTEN__
+    char found_path[300];
+    if (pc_card_scan_for_gci(0, found_path, sizeof(found_path))) {
+        OSReport("[PC] GCI scan: found web save '%s'\n", found_path);
+        return pc_save_read_gci(found_path);
+    }
+    return FALSE;
+#else
     /* Try common AC save filenames in card_a/ */
     static const char* gci_names[] = {
         PC_CARD_A_DIR "/DobutsunomoriP_MURA.gci",
@@ -720,23 +829,40 @@ static int pc_save_scan_gci_dir(void) {
     }
 
     return FALSE;
+#endif
 }
 
 /* Reload save from GCI file on disk. PC equivalent of GC re-reading the
  * memory card. */
 int pc_save_reload(void) {
+#ifdef __EMSCRIPTEN__
+    if (!pc_save_loaded) return 0;
+    return pc_save_read_gci(PC_GCI_PATH);
+#else
     struct stat st;
     if (!pc_save_loaded) return 0;
-#ifdef __EMSCRIPTEN__
-    pc_web_card_load_path(PC_GCI_PATH);
-#endif
     if (stat(PC_GCI_PATH, &st) == 0) {
         return pc_save_read_gci(PC_GCI_PATH);
     }
     return pc_save_scan_gci_dir();
+#endif
 }
 
 int pc_save_check_and_load(void) {
+#ifdef __EMSCRIPTEN__
+    {
+        char cwd[512];
+        if (getcwd(cwd, sizeof(cwd))) {
+            OSReport("[PC] Save: current working directory = '%s' (web byte-backed card)\n", cwd);
+        }
+    }
+    if (pc_save_read_gci(PC_GCI_PATH)) {
+        OSReport("[PC] GCI save loaded successfully from web bytes\n");
+        return TRUE;
+    }
+    OSReport("[PC] No web GCI save found\n");
+    return FALSE;
+#else
     struct stat st;
     {
         char cwd[512];
@@ -748,9 +874,6 @@ int pc_save_check_and_load(void) {
     pc_ensure_save_dirs();
     pc_save_migrate_legacy();
 
-#ifdef __EMSCRIPTEN__
-    pc_web_card_load_path(PC_GCI_PATH);
-#endif
     if (stat(PC_GCI_PATH, &st) == 0) {
         OSReport("[PC] Found GCI save: %s (%ld bytes)\n", PC_GCI_PATH, (long)st.st_size);
         if (pc_save_read_gci(PC_GCI_PATH)) {
@@ -793,6 +916,7 @@ int pc_save_check_and_load(void) {
 
     OSReport("[PC] No save file found\n");
     return FALSE;
+#endif
 }
 
 /* --- Card B scanning --- */
@@ -957,14 +1081,30 @@ int mCD_SaveHome_bg(int param_1, int* chan) {
 
 /* Read a GCI's Save_t into `out` (byte-swapped). Returns TRUE on success. */
 static int pc_read_gci_land_info(const char* path, Save_t* out) {
+#ifdef __EMSCRIPTEN__
+    u8* gci_bytes = NULL;
+    s32 gci_len = 0;
+    const char* slash = strrchr(path, '/');
+    const char* filename = slash ? slash + 1 : path;
+    int chan = strstr(path, PC_CARD_B_DIR) ? 1 : 0;
+    int ok = FALSE;
+
+    if (!pc_web_card_load_file(chan, filename, &gci_bytes, &gci_len)) return FALSE;
+    if (gci_len >= (s32)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE) &&
+        memcmp(((CARDDir*)gci_bytes)->gameName, "GAF", 3) == 0) {
+        Save_t* save_src = (Save_t*)(gci_bytes + GCI_HEADER_SIZE + GCI_SAVE_MAIN_OFFSET);
+        memcpy(out, save_src, sizeof(Save_t));
+        pc_save_bswap(out, PC_BSWAP_FROM_BE);
+        ok = TRUE;
+    }
+    free(gci_bytes);
+    return ok;
+#else
     FILE* fp;
     CARDDir hdr;
     u8* file_data;
     int ok = FALSE;
 
-#ifdef __EMSCRIPTEN__
-    pc_web_card_load_path(path);
-#endif
     fp = fopen(path, "rb");
     if (!fp) return FALSE;
 
@@ -983,6 +1123,7 @@ static int pc_read_gci_land_info(const char* path, Save_t* out) {
     }
     fclose(fp);
     return ok;
+#endif
 }
 
 /* Scan the "other" card for a travel-eligible town.
