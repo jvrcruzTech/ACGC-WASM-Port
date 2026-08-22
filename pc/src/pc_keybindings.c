@@ -62,12 +62,11 @@ EM_JS(char*, pc_web_keybindings_get_text_js, (const char* key_ptr), {
     const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
     xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/", false);
-    xhr.responseType = "arraybuffer";
     xhr.withCredentials = true;
     xhr.send();
     if (xhr.status === 404) return 0;
-    if (xhr.status !== 200 || !xhr.response) return 0;
-    const text = new TextDecoder().decode(new Uint8Array(xhr.response));
+    if (xhr.status !== 200) return 0;
+    const text = xhr.responseText || "";
     const len = lengthBytesUTF8(text) + 1;
     const ptr = _malloc(len);
     stringToUTF8(text, ptr, len);
@@ -81,7 +80,6 @@ EM_JS(void, pc_web_keybindings_put_text_js, (const char* key_ptr, const char* te
     const url = "/api/games/" + encodeURIComponent(gameId) + "/save/" + encodeURIComponent(key) + "/";
     const exists = new XMLHttpRequest();
     exists.open("GET", url, false);
-    exists.responseType = "arraybuffer";
     exists.withCredentials = true;
     exists.send();
     const method = exists.status === 404 ? "POST" : "PUT";

@@ -128,7 +128,9 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
     const gameId = Module.acGameId || "animal_crossing";
     const xhr = new XMLHttpRequest();
     xhr.open("GET", "/api/games/" + encodeURIComponent(gameId) + "/save/memory_card/", false);
-    xhr.responseType = "arraybuffer";
+    if (xhr.overrideMimeType) {
+        xhr.overrideMimeType("text/plain; charset=x-user-defined");
+    }
     xhr.withCredentials = true;
     try {
         xhr.send();
@@ -141,7 +143,11 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
         console.error("[Animal Crossing card] fetch " + slot + "/" + filename + " status=" + xhr.status);
         return 0;
     }
-    const bytes = new Uint8Array(xhr.response || new ArrayBuffer(0));
+    const response = xhr.responseText || "";
+    const bytes = new Uint8Array(response.length);
+    for (let i = 0; i < response.length; i++) {
+        bytes[i] = response.charCodeAt(i) & 0xff;
+    }
     if (bytes.length > capacity) {
         console.error("[Animal Crossing card] fetch memory_card too large: " + bytes.length + " > " + capacity);
         return -1;
