@@ -4,6 +4,8 @@
 static u8* aram_base = NULL;
 static u32 aram_alloc_ptr = 0;
 
+#define PC_ARAM_BASE_ADDRESS 0x4000u
+
 u32 ARInit(u32* stack_idx_addr, u32 length) {
     (void)stack_idx_addr; (void)length;
     if (!aram_base) {
@@ -11,14 +13,14 @@ u32 ARInit(u32* stack_idx_addr, u32 length) {
         if (aram_base) {
             memset(aram_base, 0, PC_ARAM_SIZE);
         }
-        aram_alloc_ptr = 0;
+        aram_alloc_ptr = PC_ARAM_BASE_ADDRESS;
     }
-    return 0; /* offset-based, base is always 0 */
+    return PC_ARAM_BASE_ADDRESS;
 }
 
 u8* pc_aram_get_base(void) { return aram_base; }
 
-u32 ARGetBaseAddress(void) { return 0; }
+u32 ARGetBaseAddress(void) { return PC_ARAM_BASE_ADDRESS; }
 u32 ARGetSize(void) { return PC_ARAM_SIZE; }
 
 u32 ARAlloc(u32 size) {
