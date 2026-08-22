@@ -247,6 +247,11 @@ void OSInit(void) {
         arena_lo = arena_memory + 0x3100;
         arena_hi = arena_memory + PC_MAIN_MEMORY_SIZE;
     }
+
+    main_thread.stackEnd = arena_memory;
+    main_thread.stackBase = arena_memory + PC_MAIN_MEMORY_SIZE;
+    main_thread.priority = 16;
+
     time_base_start = SDL_GetPerformanceCounter();
     /* compute ticks from GC epoch (Jan 1, 2000) to now, with timezone */
     {
