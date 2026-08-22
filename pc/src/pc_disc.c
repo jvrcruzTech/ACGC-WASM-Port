@@ -62,24 +62,61 @@ static int g_fst_file_count = 0;
 
 /* ---- disc I/O ---- */
 #ifdef __EMSCRIPTEN__
-EM_JS(unsigned int, pc_web_rom_size_js, (void), {
-    const romBytes = Module.acRomBytes;
-    return romBytes ? romBytes.length : 0;
-});
+static u8* g_web_rom_bytes = NULL;
+static u32 g_web_rom_size = 0;
 
-EM_JS(int, pc_web_rom_read_js, (const char* url_ptr, unsigned int offset, unsigned int size, unsigned int dest_ptr), {
-    const romBytes = Module.acRomBytes;
-    if (!romBytes) {
-        console.error("[Animal Crossing ROM] no in-memory ROM bytes are available");
+EMSCRIPTEN_KEEPALIVE
+unsigned int pc_web_rom_alloc(unsigned int size) {
+    u8* bytes;
+
+    if (g_web_rom_bytes) {
+        free(g_web_rom_bytes);
+        g_web_rom_bytes = NULL;
+        g_web_rom_size = 0;
+    }
+
+    if (size == 0) {
         return 0;
     }
-    if (offset + size > romBytes.length) {
-        console.error("[Animal Crossing ROM] memory short read offset=" + offset + " size=" + size + " romBytes=" + romBytes.length);
+
+    bytes = (u8*)malloc(size);
+    if (!bytes) {
         return 0;
     }
-    HEAPU8.set(romBytes.subarray(offset, offset + size), dest_ptr);
+
+    g_web_rom_bytes = bytes;
+    g_web_rom_size = (u32)size;
+    return (unsigned int)bytes;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void pc_web_rom_free(void) {
+    if (g_web_rom_bytes) {
+        free(g_web_rom_bytes);
+    }
+    g_web_rom_bytes = NULL;
+    g_web_rom_size = 0;
+}
+
+static unsigned int pc_web_rom_size(void) {
+    return g_web_rom_size;
+}
+
+static int pc_web_rom_read(u32 offset, void* dest, u32 size) {
+    if (!g_web_rom_bytes) {
+        printf("[Animal Crossing ROM] no WASM-owned ROM bytes are available\n");
+        return 0;
+    }
+    if (offset > g_web_rom_size || size > g_web_rom_size - offset) {
+        printf("[Animal Crossing ROM] memory short read offset=%lu size=%lu romBytes=%lu\n",
+               (unsigned long)offset,
+               (unsigned long)size,
+               (unsigned long)g_web_rom_size);
+        return 0;
+    }
+    memcpy(dest, g_web_rom_bytes + offset, size);
     return 1;
-});
+}
 
 static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
     int ok;
@@ -92,7 +129,7 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
                (unsigned long)offset,
                (unsigned long)(offset + size - 1));
     }
-    ok = pc_web_rom_read_js(df->url, offset, size, (unsigned int)dest);
+    ok = pc_web_rom_read(offset, dest, size);
     if (!ok && g_pc_verbose) {
         printf("[PC] ROM fetch failed: %s bytes=%lu-%lu wanted=%lu\n",
                df->url,
@@ -107,7 +144,7 @@ static int remote_read(DiscFile* df, u32 offset, void* dest, u32 size) {
 static int disc_open(DiscFile* df, const char* path) {
     u8 hdr[CISO_HDR_SIZE];
 #ifdef __EMSCRIPTEN__
-    u32 rom_size = pc_web_rom_size_js();
+    u32 rom_size = pc_web_rom_size();
 #endif
 
     memset(df, 0, sizeof(*df));
