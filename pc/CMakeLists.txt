@@ -452,7 +452,7 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sFETCH=1
         -sINVOKE_RUN=0
         -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_pc_web_rom_alloc,_pc_web_rom_free
-        -sEXPORTED_RUNTIME_METHODS=FS,callMain
+        -sEXPORTED_RUNTIME_METHODS=FS,callMain,HEAPU8
         -sFORCE_FILESYSTEM=1
         --profiling-funcs
         -lidbfs.js
