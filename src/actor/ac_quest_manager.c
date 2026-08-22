@@ -14,6 +14,11 @@
 #include "libultra/libultra.h"
 #include "m_malloc.h"
 #include "zurumode.h"
+#ifdef __EMSCRIPTEN__
+#include "pc_wasm_noops.h"
+#else
+#define PC_WASM_NOOP_PROC(type) ((type)&none_proc1)
+#endif
 
 enum {
     aQMgr_MODE_NORMAL,
@@ -1475,8 +1480,8 @@ static void aQMgr_actor_save(ACTOR* actorx, GAME* game) {
     QUEST_MANAGER_ACTOR* manager = (QUEST_MANAGER_ACTOR*)actorx;
     aQMgr_regist_c* regist = manager->regist;
     static aQMgr_SAVE_PROC save_proc[mQst_QUEST_TYPE_NUM] = {
-        (aQMgr_SAVE_PROC)&none_proc1,
-        (aQMgr_SAVE_PROC)&none_proc1,
+        PC_WASM_NOOP_PROC(aQMgr_SAVE_PROC),
+        PC_WASM_NOOP_PROC(aQMgr_SAVE_PROC),
         &aQMgr_save_contest
     };
     int i;
