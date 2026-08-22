@@ -4,6 +4,8 @@
 #include <dolphin/gx.h>
 #include <dolphin/os.h>
 
+#include <cstdlib>
+
 #include "MSL_C/printf.h"
 #include "libc/string.h"
 
@@ -755,8 +757,8 @@ bool JUTException::queryMapAddress_single(char* mapPath, u32 address, s32 sectio
             if ((length < 28))
                 continue;
             if ((buffer[28] == '4')) {
-                u32 addr = ((buffer[18] - '0') << 28) | strtol(buffer + 19, nullptr, 16);
-                int size = strtol(buffer + 11, nullptr, 16);
+                u32 addr = ((buffer[18] - '0') << 28) | std::strtol(buffer + 19, nullptr, 16);
+                int size = std::strtol(buffer + 11, nullptr, 16);
                 if ((addr <= address && address < addr + size)) {
                     if (out_addr)
                         *out_addr = addr;
