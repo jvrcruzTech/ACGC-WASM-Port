@@ -5811,6 +5811,17 @@ u32 emu64::emu64_taskstart_r(Gfx* dl_p) {
             }
         }
 #endif
+#ifdef __EMSCRIPTEN__
+        {
+            static int web_task_cmd_diag = 0;
+            if (web_task_cmd_diag < 96) {
+                printf("[WEB/EMU64] task_cmd=%d stack=%u op=0x%02X w0=0x%08X w1=0x%08X ptr=%p\n",
+                       web_task_cmd_diag, (unsigned)this->DL_stack_level, this->gfx_cmd,
+                       this->gfx.words.w0, this->gfx.words.w1, (void*)this->gfx_p);
+                web_task_cmd_diag++;
+            }
+        }
+#endif
         if (cmd_index < NUM_COMMANDS) {
             if (dl_func_tbl[cmd_index] != nullptr) {
                 EMU64_TIMED_SEGMENT_BEGIN();
