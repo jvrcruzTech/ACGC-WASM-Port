@@ -131,6 +131,9 @@ int  pc_audio_is_active(void);
 void pc_audio_set_paused(int paused);
 void pc_audio_shutdown(void);
 void pc_audio_start_producer_thread(void);
+#ifdef __EMSCRIPTEN__
+void pc_audio_web_pump(void);
+#endif
 void pc_audio_mq_init(void);
 void pc_audio_mq_shutdown(void);
 

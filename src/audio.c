@@ -3,6 +3,7 @@
 #include "jaudio_NES/game64.h"
 #ifdef __EMSCRIPTEN__
 #include "jaudio_NES/audiothread.h"
+#include "pc_platform.h"
 #endif
 #include "jaudio_NES/melody.h"
 #include "jaudio_NES/rhythm.h"
@@ -48,6 +49,7 @@ extern void sAdo_Calc_MicPosition_forLevel(f32* fcalc, u16* scalc, const xyz_t* 
 extern void sAdo_GameFrame() {
     Na_GameFrame();
 #ifdef __EMSCRIPTEN__
+    pc_audio_web_pump();
     pc_audio_process_frame();
 #endif
 }

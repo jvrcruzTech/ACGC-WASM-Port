@@ -26,10 +26,39 @@ static s16 ring_buffer[RING_BUF_SAMPLES];
 static SDL_atomic_t ring_write_pos; /* written by audio producer thread */
 static SDL_atomic_t ring_read_pos;  /* written by SDL audio callback */
 static SDL_AudioDeviceID audio_device = 0;
+#ifdef __EMSCRIPTEN__
+static int audio_device_requested = 0;
+static int audio_device_failed = 0;
+static int audio_dma_running = 0;
+#endif
 
 typedef void (*AIDMACallback)(void);
 static AIDMACallback ai_dma_callback = NULL;
 static u32 ai_dsp_sample_rate = PC_AUDIO_SAMPLE_RATE;
+
+static void pc_audio_callback(void* userdata, Uint8* stream, int len);
+
+static int pc_audio_open_device(void) {
+    if (audio_device != 0) return 1;
+
+    SDL_AudioSpec want, have;
+    memset(&want, 0, sizeof(want));
+    want.freq = PC_AUDIO_SAMPLE_RATE;
+    want.format = AUDIO_S16SYS;
+    want.channels = 2;
+    want.samples = 512;
+    want.callback = pc_audio_callback;
+
+    audio_device = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+    if (audio_device != 0) {
+        printf("[AUDIO] Opened: freq=%d fmt=0x%04X ch=%d samples=%d (requested: freq=%d)\n",
+               have.freq, have.format, have.channels, have.samples, want.freq);
+        return 1;
+    }
+
+    printf("[AUDIO] Failed to open: %s\n", SDL_GetError());
+    return 0;
+}
 
 /* --- Audio producer thread --- */
 #ifndef __EMSCRIPTEN__
@@ -102,23 +131,12 @@ static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
 
 void AIInit(u8* stack) {
     (void)stack;
-    if (audio_device != 0) return;
-
-    SDL_AudioSpec want, have;
-    memset(&want, 0, sizeof(want));
-    want.freq = PC_AUDIO_SAMPLE_RATE;
-    want.format = AUDIO_S16SYS;
-    want.channels = 2;
-    want.samples = 512;
-    want.callback = pc_audio_callback;
-
-    audio_device = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
-    if (audio_device != 0) {
-        printf("[AUDIO] Opened: freq=%d fmt=0x%04X ch=%d samples=%d (requested: freq=%d)\n",
-               have.freq, have.format, have.channels, have.samples, want.freq);
-    } else {
-        printf("[AUDIO] Failed to open: %s\n", SDL_GetError());
-    }
+#ifdef __EMSCRIPTEN__
+    audio_device_requested = 1;
+    printf("[AUDIO] SDL audio device deferred until web frame loop\n");
+#else
+    pc_audio_open_device();
+#endif
 }
 
 void AIInitDMA(u32 addr, u32 size) {
@@ -152,10 +170,16 @@ void AIInitDMA(u32 addr, u32 size) {
 }
 
 void AIStartDMA(void) {
+#ifdef __EMSCRIPTEN__
+    audio_dma_running = 1;
+#endif
     if (audio_device != 0) SDL_PauseAudioDevice(audio_device, 0);
 }
 
 void AIStopDMA(void) {
+#ifdef __EMSCRIPTEN__
+    audio_dma_running = 0;
+#endif
     if (audio_device != 0) SDL_PauseAudioDevice(audio_device, 1);
 }
 
@@ -205,6 +229,17 @@ int pc_audio_get_buffer_fill(void) {
 int pc_audio_is_active(void) {
     return audio_device != 0;
 }
+
+#ifdef __EMSCRIPTEN__
+void pc_audio_web_pump(void) {
+    if (audio_device == 0 && audio_device_requested && !audio_device_failed) {
+        audio_device_failed = !pc_audio_open_device();
+    }
+    if (audio_device != 0 && audio_dma_running) {
+        SDL_PauseAudioDevice(audio_device, 0);
+    }
+}
+#endif
 
 void pc_audio_shutdown(void) {
 #ifndef __EMSCRIPTEN__
