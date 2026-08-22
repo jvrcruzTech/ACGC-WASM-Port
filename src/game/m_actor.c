@@ -721,15 +721,6 @@ extern void Actor_init_actor_class(ACTOR* actor, ACTOR_PROFILE* profile, ACTOR_D
     actor->npc_id = name_id;
 }
 
-#ifdef __EMSCRIPTEN__
-static mActor_proc Actor_wasm_safe_proc(mActor_proc proc) {
-    if (proc == NULL || proc == (mActor_proc)none_proc1) {
-        return none_proc_actor;
-    }
-    return proc;
-}
-#endif
-
 typedef struct overlay_struct {
     const char* actor_name;
 } mAc_overlay_info_c;
@@ -768,13 +759,6 @@ extern ACTOR* Actor_info_make_actor(Actor_info* actor_info, GAME* game, s16 prof
     dlftbl->num_actors++;
     Actor_init_actor_class(actor, profile, dlftbl, play, data_bank_idx, x, y, z, rot_x, rot_y, rot_z, block_x, block_z,
                            move_actor_list_idx, name_id, arg);
-#ifdef __EMSCRIPTEN__
-    actor->ct_proc = Actor_wasm_safe_proc(actor->ct_proc);
-    actor->dt_proc = Actor_wasm_safe_proc(actor->dt_proc);
-    actor->mv_proc = Actor_wasm_safe_proc(actor->mv_proc);
-    actor->dw_proc = Actor_wasm_safe_proc(actor->dw_proc);
-    actor->sv_proc = Actor_wasm_safe_proc(actor->sv_proc);
-#endif
     Actor_info_part_new(actor_info, actor, profile->part);
     mNpc_SetNpcinfo(actor, npc_info_idx);
     Actor_ct(actor, game);

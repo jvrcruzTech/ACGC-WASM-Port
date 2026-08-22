@@ -449,6 +449,7 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sMAXIMUM_MEMORY=2048MB
         -sASYNCIFY
         -sASYNCIFY_STACK_SIZE=1048576
+        -sEMULATE_FUNCTION_POINTER_CASTS=1
         -sFETCH=1
         -sINVOKE_RUN=0
         -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_pc_web_rom_alloc,_pc_web_rom_free
