@@ -490,7 +490,7 @@ extern void JW_Init() {
     void* arena_hi = OSGetArenaHi();
     void* arena_lo = OSGetArenaLo();
 
-    SystemHeapSize = (u32)arena_hi - (u32)arena_lo - 0xD0;
+    SystemHeapSize = (u32)arena_hi - (u32)arena_lo - 0x100000;
     JC_JFWSystem_setMaxStdHeap(1);
     JC_JFWSystem_setSysHeapSize(SystemHeapSize);
     JC_JFWSystem_setFifoBufSize(0x10001);
