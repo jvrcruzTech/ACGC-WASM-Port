@@ -27,8 +27,8 @@ extern void OSReportMonopoly(); /* @unused */
 
 extern void OSReportDisable();
 extern void OSReportEnable();
-//void OSVReport(const char* fmt, va_list list);
-//void OSReport(const char* fmt, ...);
+void OSVReport(const char* fmt, va_list list);
+void OSReport(const char* fmt, ...);
 //void OSPanic(const char* file, u32 line, const char* fmt, ...);
 extern void OSChangeBootMode(u32 mode);
 extern void OSDVDFatalError();

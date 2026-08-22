@@ -27,6 +27,8 @@ int bcmp(void* v1, void* v2, u32 size);
 void bcopy(void* src, void* dst, size_t n);
 #endif
 void bzero(void* ptr, size_t size);
+void OSReport(const char* fmt, ...);
+void OSVReport(const char* fmt, va_list list);
 void osSyncPrintf(const char* fmt, ...);
 void osWritebackDCache(void* vaddr, u32 nbytes);
 u32 osGetCount(void);
