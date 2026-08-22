@@ -88,7 +88,8 @@ void VIWaitForRetrace(void) {
                 /* Spin for sub-ms precision. */
                 while (elapsed_us < (Uint64)pace_us) {
 #ifdef __EMSCRIPTEN__
-                    break;
+                    Uint64 remain_us = (Uint64)pace_us - elapsed_us;
+                    emscripten_sleep((unsigned int)((remain_us + 999) / 1000));
 #else
                     Uint64 remain_us = (Uint64)pace_us - elapsed_us;
                     if (remain_us > 2000) {
