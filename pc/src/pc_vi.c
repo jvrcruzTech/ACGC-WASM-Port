@@ -133,6 +133,15 @@ void VIWaitForRetrace(void) {
             char title[64];
             snprintf(title, sizeof(title), "Animal Crossing - %.1f FPS", fps);
             SDL_SetWindowTitle(g_pc_window, title);
+#ifdef __EMSCRIPTEN__
+            {
+                extern int pc_gx_draw_call_count;
+                GLenum gl_err = glGetError();
+                printf("[WEB/FRAME] frame=%lu fps=%.1f draws=%d gl=0x%04X audio_fill=%d\n",
+                       (unsigned long)pc_frame_counter, fps, pc_gx_draw_call_count,
+                       (unsigned int)gl_err, pc_audio_get_buffer_fill());
+            }
+#endif
             fps_start = now;
             fps_count = 0;
         }

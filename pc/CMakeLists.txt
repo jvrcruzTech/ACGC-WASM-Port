@@ -436,6 +436,7 @@ add_executable(ac_pc
 if(TARGET_WEB OR EMSCRIPTEN)
     target_compile_options(ac_pc PRIVATE
         -sUSE_SDL=2
+        -DPC_GL_DEBUG
     )
     target_link_options(ac_pc PRIVATE
         -sUSE_SDL=2
