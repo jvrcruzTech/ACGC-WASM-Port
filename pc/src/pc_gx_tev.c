@@ -27,6 +27,7 @@ static char* load_text_file(const char* path) {
     if (!buf) return NULL;
     memcpy(buf, data, (size_t)len);
     buf[len] = '\0';
+    printf("[PC/TEV] Loaded embedded web shader: %s (%u bytes)\n", path, len);
     return buf;
 #else
     FILE* f = fopen(path, "rb");
