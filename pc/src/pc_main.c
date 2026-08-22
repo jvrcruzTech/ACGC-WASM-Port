@@ -115,7 +115,9 @@ void pc_platform_init(void) {
     }
 #endif
 
+#ifndef __EMSCRIPTEN__
     SDL_GL_SetSwapInterval(g_pc_settings.vsync);
+#endif
 
     pc_platform_update_window_size();
 
