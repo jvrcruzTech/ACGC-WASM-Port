@@ -130,6 +130,10 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
         const loadTravelCard = (result) => {
             const bytes = result && result.bytes;
             if (!bytes || !bytes.length) return 0;
+            if (bytes.length < 467008 || bytes[0] !== 0x47 || bytes[1] !== 0x41 || bytes[2] !== 0x46) {
+                console.error("[Animal Crossing card] travel memory_card is not a usable Animal Crossing GCI");
+                return 0;
+            }
             if (bytes.length > capacity) {
                 console.error("[Animal Crossing card] fetch travel memory_card too large: " + bytes.length + " > " + capacity);
                 return -1;
@@ -209,6 +213,23 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     return 1;
 });
 
+EM_JS(void, pc_web_card_release_travel_js, (void), {
+    if (Module.acTravelCardB) {
+        Module.acTravelCardB.bytes = null;
+        Module.acTravelCardB = null;
+    }
+    const sockets = self.__ACGC_TRAVEL_SOCKETS__ || [];
+    while (sockets.length) {
+        const socket = sockets.pop();
+        try {
+            socket.close(1000, "travel-complete");
+        } catch (err) {
+            console.warn("[Animal Crossing card] failed to close travel socket", err);
+        }
+    }
+    console.log("[Animal Crossing card] released travel memory_card for card b");
+});
+
 static int web_card_fetch_into(s32 chan, const char* filename, u8** out_data, s32* out_len, s32 min_capacity) {
     s32 capacity = min_capacity > 0 ? min_capacity : (1024 * 1024);
     u8* data;
@@ -233,6 +254,10 @@ int pc_web_card_load_file(s32 chan, const char* filename, u8** out_data, s32* ou
 int pc_web_card_store_file(s32 chan, const char* filename, const u8* data, s32 len) {
     if (!card_filename_safe(filename) || !data || len < 0) return 0;
     return pc_web_card_store_js(chan, filename, (unsigned int)data, (unsigned int)len);
+}
+
+void pc_web_card_release_travel(void) {
+    pc_web_card_release_travel_js();
 }
 #endif
 

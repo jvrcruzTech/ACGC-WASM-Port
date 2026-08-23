@@ -87,6 +87,9 @@ extern int pc_card_scan_for_gci(int chan, char* out_path, int out_size);
 #ifdef __EMSCRIPTEN__
 extern int pc_web_card_load_file(s32 chan, const char* filename, u8** out_data, s32* out_len);
 extern int pc_web_card_store_file(s32 chan, const char* filename, const u8* data, s32 len);
+#ifdef __EMSCRIPTEN__
+extern void pc_web_card_release_travel(void);
+#endif
 #endif
 
 /* External: functions from decomp used in mCD_toNextLand */
@@ -943,6 +946,9 @@ void mCD_InitAll(void) {
     l_keepSave_set = FALSE;
     l_mcd_keep_startCond = 0;
     l_card_b_gci_path[0] = '\0';
+#ifdef __EMSCRIPTEN__
+    pc_web_card_release_travel();
+#endif
 }
 
 int mCD_InitGameStart_bg(int player_no, int card_private_idx, int start_cond, s32* mounted_chan) {
@@ -1212,6 +1218,10 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
                 if (chan) *chan = mCD_SLOT_B;
                 return mCD_TRANS_ERR_IOERROR;
             }
+#ifdef __EMSCRIPTEN__
+            pc_web_card_release_travel();
+#endif
+            l_card_b_gci_path[0] = '\0';
         } else {
             OSReport("[PC] SaveStation_NextLand(return): no Card B path cached\n");
         }
