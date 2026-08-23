@@ -27,6 +27,9 @@
 #include "pc_menu_util.h"
 #include "main.h"
 #include <stdio.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #endif
 
 #define G_CC_TITLE PRIMITIVE, ENVIRONMENT, TEXEL0, ENVIRONMENT, PRIMITIVE, 0, TEXEL0, 0
@@ -338,6 +341,24 @@ static void aAL_fade_out_start_wait_init(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
 }
 
 #ifdef PC_ENHANCEMENTS
+#ifdef __EMSCRIPTEN__
+EM_JS(void, aAL_pc_manage_travel_codes_js, (void), {
+  if (Module.acManageTravelCodes) {
+    Module.acManageTravelCodes();
+  } else {
+    console.warn("[Animal Crossing title] travel code manager is unavailable");
+  }
+});
+#endif
+
+static void aAL_pc_manage_travel_codes(void) {
+#ifdef __EMSCRIPTEN__
+  aAL_pc_manage_travel_codes_js();
+#else
+  printf("[LOGO] Travel code manager is only available in the web build\n");
+#endif
+}
+
 static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
   GAME_PLAY* play = (GAME_PLAY*)game;
   f32 dt = (f32)game->graph->dt_num_60fps_frames;
@@ -391,7 +412,7 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
     return;
   }
 
-  /* Main menu navigation (3 items: Start / Options / Quit) */
+  /* Main menu navigation (3 items: Start / Options / Travel Codes) */
   if (actor->pc_cursor_cooldown <= 0.0f) {
     if (stick_y > 30 || (on_btn & BUTTON_DUP)) {
       if (actor->pc_menu_sel > 0) {
@@ -421,8 +442,8 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
         actor->pc_cursor_cooldown = 10.0f;
         pc_settings_menu_enter();
         break;
-      case 2: /* Quit Game */
-        g_pc_running = 0;
+      case 2: /* Manage Travel Codes */
+        aAL_pc_manage_travel_codes();
         actor->pc_cursor_cooldown = 10.0f;
         break;
     }
@@ -798,7 +819,7 @@ static void aAL_pc_menu_draw(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
   static const u32 dim_g[5] = {  40,  50,  40,  50,  50 };
   static const u32 dim_b[5] = {  40,  30,  60,  70,  60 };
 
-  static const char* const labels[3] = { "Start Game", "Options", "Quit Game" }; // me when const
+  static const char* const labels[3] = { "Start Game", "Options", "Manage Travel Codes" };
 
   f32 y_base = 135.0f;
   f32 line_h = 18.0f;
