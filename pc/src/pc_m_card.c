@@ -1302,7 +1302,7 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
 
         l_mcd_keep_startCond = mCD_START_COND_OUTGOING_FOREIGNER;
 
-        if (chan) *chan = mCD_SLOT_A;
+        if (chan) *chan = mCD_SLOT_B;
         return mCD_TRANS_ERR_NONE;
     }
 
