@@ -449,6 +449,7 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sMAXIMUM_MEMORY=2048MB
         -sASYNCIFY
         -sASYNCIFY_STACK_SIZE=8388608
+        -sASYNCIFY_IMPORTS=pc_web_prompt_travel_card_b_js
         -sSTACK_SIZE=2097152
         -sEMULATE_FUNCTION_POINTER_CASTS=1
         -sFETCH=1
