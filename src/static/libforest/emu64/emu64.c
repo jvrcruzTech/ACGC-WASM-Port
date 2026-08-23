@@ -3304,11 +3304,19 @@ void emu64::dirty_check(int tile, int n_tiles, int do_texture_matrix) {
                 );
             }
 
+#ifdef TARGET_PC
+            GXInitLightColor(&light_obj, l->color.color);
+#else
             GXInitLightColor(&light_obj, emu64_raw_color_to_gx(l->color.raw));
+#endif
             GXLoadLightObjImm(&light_obj, (GXLightID)(1 << i));
         }
 
+#ifdef TARGET_PC
+        GXSetChanAmbColor(GX_COLOR0A0, this->lights[i].color.color);
+#else
         GXSetChanAmbColor(GX_COLOR0A0, emu64_raw_color_to_gx(this->lights[i].color.raw));
+#endif
         EMU64_TIMED_SEGMENT_END(dirty_lightX_time);
         this->dirty_lightX_cnt++;
     }

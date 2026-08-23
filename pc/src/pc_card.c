@@ -195,7 +195,7 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
             return 0;
         }
         Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
-        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile(filename, data)) {
+        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile("memory_card", data)) {
             console.error("[Animal Crossing card] failed to persist authorized card " + slot + " write for " + filename);
             return 0;
         }
@@ -223,7 +223,7 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
             return 0;
         }
         Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
-        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile(filename, data)) {
+        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile("memory_card", data)) {
             console.error("[Animal Crossing card] failed to persist authorized card " + slot + " delete for " + filename);
             return 0;
         }
