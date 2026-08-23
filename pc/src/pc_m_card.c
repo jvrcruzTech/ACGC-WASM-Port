@@ -928,6 +928,7 @@ int pc_save_check_and_load(void) {
 
 #ifdef __EMSCRIPTEN__
 EM_JS(int, pc_web_prompt_travel_card_b_js, (void), {
+    const state = Module.acTravelCardBPrompt || (Module.acTravelCardBPrompt = { status: "idle" });
     const loadTravelCard = (result) => {
         const bytes = result && result.bytes;
         if (!bytes || !bytes.length) return 0;
@@ -945,29 +946,25 @@ EM_JS(int, pc_web_prompt_travel_card_b_js, (void), {
     };
 
     if (Module.acTravelCardB && Module.acTravelCardB.bytes) return 1;
-    if (!Module.acPromptTravelCode || !Asyncify || !Asyncify.handleSleep) return 0;
+    if (state.status === "loading") return -1;
+    if (state.status === "failed") {
+        state.status = "idle";
+        return 0;
+    }
+    if (!Module.acPromptTravelCode) return 0;
 
-    return Asyncify.handleSleep(function(wakeUp) {
-        Module.acPromptTravelCode().then(function(result) {
-            const loaded = loadTravelCard(result);
-            setTimeout(function() {
-                wakeUp(loaded);
-            }, 0);
-        }, function(err) {
-            console.error("[Animal Crossing card] travel code prompt failed", err);
-            setTimeout(function() {
-                wakeUp(0);
-            }, 0);
-        });
+    state.status = "loading";
+    Module.acPromptTravelCode().then(function(result) {
+        state.status = loadTravelCard(result) ? "ready" : "failed";
+    }, function(err) {
+        console.error("[Animal Crossing card] travel code prompt failed", err);
+        state.status = "failed";
     });
+    return -1;
 });
 
 static int pc_web_prompt_travel_card_b(void) {
-    int loaded;
-    pc_audio_set_paused(1);
-    loaded = pc_web_prompt_travel_card_b_js();
-    pc_audio_set_paused(0);
-    return loaded;
+    return pc_web_prompt_travel_card_b_js();
 }
 #endif
 
@@ -1205,9 +1202,16 @@ int mCD_CheckStation_bg(s32* chan) {
 
     if (chan) *chan = mCD_SLOT_A;
 #ifdef __EMSCRIPTEN__
-    if (!pc_web_prompt_travel_card_b()) {
-        OSReport("[PC] CheckStation: no travel Card B town loaded\n");
-        return mCD_TRANS_ERR_NONE;
+    {
+        int prompt_res = pc_web_prompt_travel_card_b();
+        if (prompt_res < 0) {
+            OSReport("[PC] CheckStation: waiting for travel Card B town\n");
+            return mCD_TRANS_ERR_BUSY;
+        }
+        if (!prompt_res) {
+            OSReport("[PC] CheckStation: no travel Card B town loaded\n");
+            return mCD_TRANS_ERR_NONE;
+        }
     }
 #endif
     if (pc_card_b_find_town()) {
