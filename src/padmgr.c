@@ -358,7 +358,12 @@ static void padmgr_UpdatePC(void) {
     {
         extern int g_pc_paused;
         extern int g_pc_pause_input_drain;
+#ifdef __EMSCRIPTEN__
+        extern int pc_web_is_pad_frozen(void);
+        int suppress = g_pc_paused || pc_web_is_pad_frozen();
+#else
         int suppress = g_pc_paused;
+#endif
         if (g_pc_pause_input_drain) {
             /* Only buttons gate the drain. Gamepad stick drift could keep
              * cur_pads[].stick_* non-zero indefinitely and lock the player
