@@ -42,6 +42,7 @@ static u8 pad_trigger_value(PCPadCode code) {
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 
+static int s_web_pad_ready = 0;
 static u16 s_web_pad_buttons = 0;
 static s8 s_web_stick_x = 0;
 static s8 s_web_stick_y = 0;
@@ -52,6 +53,7 @@ static u8 s_web_trigger_r = 0;
 
 EMSCRIPTEN_KEEPALIVE
 void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 substickY, u8 triggerL, u8 triggerR) {
+    if (!s_web_pad_ready) return;
     s_web_pad_buttons = buttons;
     s_web_stick_x = stickX;
     s_web_stick_y = stickY;
@@ -63,7 +65,9 @@ void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 su
 #endif
 
 BOOL PADInit(void) {
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+    s_web_pad_ready = 1;
+#else
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -223,10 +227,14 @@ void PADControlAllMotors(const u32* commands) {
 }
 
 void PADCleanup(void) {
+#ifdef __EMSCRIPTEN__
+    s_web_pad_ready = 0;
+#else
     if (g_controller) {
         SDL_GameControllerClose(g_controller);
         g_controller = NULL;
     }
+#endif
 }
 
 BOOL PADReset(u32 mask) { (void)mask; return TRUE; }
