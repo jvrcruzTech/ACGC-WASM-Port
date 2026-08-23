@@ -666,7 +666,8 @@ static int pc_save_read_gci_to_keep(const char* path) {
     s32 gci_len = 0;
     const char* slash = strrchr(path, '/');
     const char* filename = slash ? slash + 1 : path;
-    if (!pc_web_card_load_file(1, filename, &gci_bytes, &gci_len)) return FALSE;
+    int chan = strstr(path, PC_CARD_B_DIR) ? 1 : 0;
+    if (!pc_web_card_load_file(chan, filename, &gci_bytes, &gci_len)) return FALSE;
     if (gci_len < (s32)(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
         free(gci_bytes);
         return FALSE;
@@ -1287,6 +1288,9 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
         }
 
         /* Persist visited-town state to its Card B GCI. */
+        if (l_card_b_gci_path[0] == '\0') {
+            pc_card_b_find_town();
+        }
         if (l_card_b_gci_path[0] != '\0') {
             char tmp_path[320];
             snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", l_card_b_gci_path);
