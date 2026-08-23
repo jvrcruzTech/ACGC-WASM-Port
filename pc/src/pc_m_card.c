@@ -993,9 +993,6 @@ void mCD_InitAll(void) {
     l_keepSave_set = FALSE;
     l_mcd_keep_startCond = 0;
     l_card_b_gci_path[0] = '\0';
-#ifdef __EMSCRIPTEN__
-    pc_web_card_release_travel();
-#endif
 }
 
 int mCD_InitGameStart_bg(int player_no, int card_private_idx, int start_cond, s32* mounted_chan) {
