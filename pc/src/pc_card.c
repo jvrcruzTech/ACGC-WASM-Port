@@ -126,6 +126,36 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
     const slot = chan === 1 ? "b" : "a";
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
+    if (chan === 1) {
+        const loadTravelCard = (result) => {
+            const bytes = result && result.bytes;
+            if (!bytes || !bytes.length) return 0;
+            if (bytes.length > capacity) {
+                console.error("[Animal Crossing card] fetch travel memory_card too large: " + bytes.length + " > " + capacity);
+                return -1;
+            }
+            Module.acTravelCardB = {
+                bytes: bytes,
+                save: result.save || null,
+                token: result.token || ""
+            };
+            HEAPU8.set(bytes, dest_ptr);
+            console.log("[Animal Crossing card] loaded travel memory_card for card " + slot + " (" + bytes.length + " bytes)");
+            return bytes.length;
+        };
+        if (Module.acTravelCardB && Module.acTravelCardB.bytes) {
+            return loadTravelCard(Module.acTravelCardB);
+        }
+        if (!Module.acPromptTravelCode || !Asyncify || !Asyncify.handleSleep) return 0;
+        return Asyncify.handleSleep(function(wakeUp) {
+            Module.acPromptTravelCode().then(function(result) {
+                wakeUp(loadTravelCard(result));
+            }).catch(function(err) {
+                console.error("[Animal Crossing card] travel code prompt failed", err);
+                wakeUp(0);
+            });
+        });
+    }
     const entry = (Module.acSaveFiles || {})["memory_card"];
     if (!entry || !entry.bytes) return 0;
     const bytes = entry.bytes;
@@ -144,6 +174,12 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const data = HEAPU8.slice(data_ptr, data_ptr + length);
+    if (chan === 1) {
+        Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
+        if (Module.acPersistTravelSaveFile) Module.acPersistTravelSaveFile(data);
+        console.log("[Animal Crossing card] stored travel memory_card for card " + slot + " (" + length + " bytes)");
+        return 1;
+    }
     const files = Module.acSaveFiles || (Module.acSaveFiles = {});
     const existed = !!files["memory_card"]?.exists;
     files["memory_card"] = { bytes: data, exists: true };
@@ -158,6 +194,12 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const filename = UTF8ToString(filename_ptr);
     const gameId = Module.acGameId || "animal_crossing";
     const data = new Uint8Array(0);
+    if (chan === 1) {
+        Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
+        if (Module.acPersistTravelSaveFile) Module.acPersistTravelSaveFile(data);
+        console.log("[Animal Crossing card] cleared travel memory_card for card " + slot);
+        return 1;
+    }
     const files = Module.acSaveFiles || (Module.acSaveFiles = {});
     const existed = !!files["memory_card"]?.exists;
     files["memory_card"] = { bytes: data, exists: true };
