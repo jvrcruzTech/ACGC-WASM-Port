@@ -213,17 +213,6 @@ u32 PADRead(PADStatus* status) {
         triggerR = pad_trigger_value(pb->r);
     }
 
-#ifdef __EMSCRIPTEN__
-    /* Combine Web JS pad inputs together at once with SDL inputs */
-    buttons |= s_web_pad_buttons;
-    if (s_web_stick_x != 0) stickX = s_web_stick_x;
-    if (s_web_stick_y != 0) stickY = s_web_stick_y;
-    if (s_web_substick_x != 0) cstickX = s_web_substick_x;
-    if (s_web_substick_y != 0) cstickY = s_web_substick_y;
-    if (s_web_trigger_l != 0) triggerL = s_web_trigger_l;
-    if (s_web_trigger_r != 0) triggerR = s_web_trigger_r;
-#endif
-
     status[0].button = buttons;
     status[0].stickX = stickX;
     status[0].stickY = stickY;
