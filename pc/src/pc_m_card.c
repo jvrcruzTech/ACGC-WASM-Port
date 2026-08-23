@@ -949,8 +949,9 @@ EM_JS(int, pc_web_prompt_travel_card_b_js, (void), {
 
     return Asyncify.handleSleep(function(wakeUp) {
         Module.acPromptTravelCode().then(function(result) {
-            wakeUp(loadTravelCard(result));
-        }).catch(function(err) {
+            const loaded = loadTravelCard(result);
+            wakeUp(loaded);
+        }, function(err) {
             console.error("[Animal Crossing card] travel code prompt failed", err);
             wakeUp(0);
         });
