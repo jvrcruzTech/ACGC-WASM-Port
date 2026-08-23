@@ -1240,7 +1240,8 @@ int mCD_CheckStation_bg(s32* chan) {
         }
         if (!prompt_res) {
             WEB_LOG("[PC] CheckStation: no travel Card B town loaded");
-            return mCD_TRANS_ERR_NONE;
+            if (chan) *chan = mCD_SLOT_B;
+            return mCD_TRANS_ERR_NO_TOWN_DATA;
         }
     }
 #endif
@@ -1261,7 +1262,8 @@ int mCD_CheckStation_bg(s32* chan) {
         }
     }
 
-    return mCD_TRANS_ERR_NONE;
+    if (chan) *chan = mCD_SLOT_B;
+    return mCD_TRANS_ERR_NO_TOWN_DATA;
 }
 
 /* Persist current town and load the "other" town into l_keepSave.
