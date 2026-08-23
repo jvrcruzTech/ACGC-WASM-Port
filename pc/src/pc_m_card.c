@@ -47,6 +47,8 @@
 #include <emscripten.h>
 #endif
 
+#define WEB_LOG(fmt, ...) do { printf(fmt "\n", ##__VA_ARGS__); fflush(stdout); } while(0)
+
 /* --- Path constants --- */
 #define PC_CARD_A_DIR     "save/card_a"
 #define PC_CARD_B_DIR     "save/card_b"
@@ -322,7 +324,7 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
     u16 checksum;
     u8* others_ptr;
 
-    OSReport("[PC] pc_save_write_gci_to: path='%s', pc_save_ready=%d\n", gci_path, pc_save_ready);
+    WEB_LOG("[PC] pc_save_write_gci_to: path='%s', pc_save_ready=%d", gci_path, pc_save_ready);
 
     if (!pc_save_ready) return TRUE;
 
@@ -441,17 +443,17 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         }
         memcpy(gci_bytes, &dir_hdr, GCI_HEADER_SIZE);
         memcpy(gci_bytes + GCI_HEADER_SIZE, file_data, GCI_FILE_DATA_SIZE);
-        OSReport("[PC] pc_save_write_gci_to: dispatching to pc_web_card_store_file (chan=%d, filename='%s', size=%d)\n",
+        WEB_LOG("[PC] pc_save_write_gci_to: dispatching to pc_web_card_store_file (chan=%d, filename='%s', size=%d)",
                  chan, filename, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE);
         if (!pc_web_card_store_file(chan, filename, gci_bytes, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
-            OSReport("[PC] GCI save: web byte upload failed for card %d file '%s'\n", chan, filename);
+            WEB_LOG("[PC] GCI save: web byte upload failed for card %d file '%s'", chan, filename);
             free(gci_bytes);
             free(file_data);
             return FALSE;
         }
         free(gci_bytes);
         free(file_data);
-        OSReport("[PC] GCI save: uploaded card %d file '%s' as raw bytes\n", chan, filename);
+        WEB_LOG("[PC] GCI save: uploaded card %d file '%s' as raw bytes", chan, filename);
         return TRUE;
     }
 #else
@@ -1276,8 +1278,8 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
                     mFRm_GetFlatCheckSum((u16*)&l_mcd_foreigner_file.file,
                                          sizeof(mCD_foreigner_c),
                                          l_mcd_foreigner_file.file.checksum);
-                OSReport("[PC] SaveStation_NextLand(return): refreshed passport for '%.*s'\n",
-                         PLAYER_NAME_LEN, l_mcd_foreigner_file.file.priv.player_ID.player_name);
+                WEB_LOG("[PC] SaveStation_NextLand(return): refreshed passport for '%.*s'",
+                        PLAYER_NAME_LEN, l_mcd_foreigner_file.file.priv.player_ID.player_name);
             }
         }
 
@@ -1286,7 +1288,7 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
             char tmp_path[320];
             snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", l_card_b_gci_path);
             if (!pc_save_write_gci_to(l_card_b_gci_path, tmp_path)) {
-                OSReport("[PC] SaveStation_NextLand(return): failed to save visited town\n");
+                WEB_LOG("[PC] SaveStation_NextLand(return): failed to save visited town");
                 if (chan) *chan = mCD_SLOT_B;
                 return mCD_TRANS_ERR_IOERROR;
             }
@@ -1295,11 +1297,11 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
 #endif
             l_card_b_gci_path[0] = '\0';
         } else {
-            OSReport("[PC] SaveStation_NextLand(return): no Card B path cached\n");
+            WEB_LOG("[PC] SaveStation_NextLand(return): no Card B path cached");
         }
 
         if (!pc_save_read_gci_to_keep(PC_GCI_PATH)) {
-            OSReport("[PC] SaveStation_NextLand(return): failed to load home town\n");
+            WEB_LOG("[PC] SaveStation_NextLand(return): failed to load home town");
             if (chan) *chan = mCD_SLOT_A;
             return mCD_TRANS_ERR_CORRUPT;
         }
@@ -1314,7 +1316,7 @@ int mCD_SaveStation_NextLand_bg(s32* chan) {
 
     /* Must have a Card B town path from prior CheckStation */
     if (l_card_b_gci_path[0] == '\0') {
-        OSReport("[PC] SaveStation_NextLand: no Card B path\n");
+        WEB_LOG("[PC] SaveStation_NextLand: no Card B path");
         return mCD_TRANS_ERR_NO_TOWN_DATA;
     }
 
