@@ -107,10 +107,28 @@ static void card_slot_free(CARDFileInfo_PC* fi) {
 /* Per-channel directory: chan 0 = card_a, chan 1 = card_b */
 static const char* card_dir[2] = { "save/card_a", "save/card_b" };
 static int card_mounted[2] = {0, 0};
+static s32 card_async_result[2] = { CARD_RESULT_READY, CARD_RESULT_READY };
+static int card_async_busy_ticks[2] = { 0, 0 };
 
 static const char* get_card_dir(s32 chan) {
     if (chan >= 0 && chan <= 1) return card_dir[chan];
     return card_dir[0];
+}
+
+static int card_chan_valid(s32 chan) {
+    return chan >= 0 && chan <= 1;
+}
+
+static void card_async_accept(s32 chan, s32 final_result) {
+    if (!card_chan_valid(chan)) return;
+    card_async_result[chan] = final_result;
+    card_async_busy_ticks[chan] = 1;
+}
+
+static void card_async_clear(s32 chan) {
+    if (!card_chan_valid(chan)) return;
+    card_async_result[chan] = CARD_RESULT_READY;
+    card_async_busy_ticks[chan] = 0;
 }
 
 /* reject path traversal */
@@ -171,9 +189,17 @@ EM_JS(int, pc_web_card_store_js, (int chan, const char* filename_ptr, unsigned i
     const gameId = Module.acGameId || "animal_crossing";
     const data = HEAPU8.slice(data_ptr, data_ptr + length);
     if (chan === 1) {
+        const travel = Module.acTravelCardB || {};
+        if (!travel.save || !travel.save.id || !travel.token) {
+            console.error("[Animal Crossing card] refused unauthorized card " + slot + " write for " + filename);
+            return 0;
+        }
         Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
-        if (Module.acPersistTravelSaveFile) Module.acPersistTravelSaveFile(data);
-        console.log("[Animal Crossing card] stored travel memory_card for card " + slot + " (" + length + " bytes)");
+        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile(filename, data)) {
+            console.error("[Animal Crossing card] failed to persist authorized card " + slot + " write for " + filename);
+            return 0;
+        }
+        console.log("[Animal Crossing card] stored authorized travel " + filename + " for card " + slot + " (" + length + " bytes)");
         return 1;
     }
     const files = Module.acSaveFiles || (Module.acSaveFiles = {});
@@ -191,9 +217,17 @@ EM_JS(int, pc_web_card_delete_js, (int chan, const char* filename_ptr), {
     const gameId = Module.acGameId || "animal_crossing";
     const data = new Uint8Array(0);
     if (chan === 1) {
+        const travel = Module.acTravelCardB || {};
+        if (!travel.save || !travel.save.id || !travel.token) {
+            console.error("[Animal Crossing card] refused unauthorized card " + slot + " delete for " + filename);
+            return 0;
+        }
         Module.acTravelCardB = Object.assign({}, Module.acTravelCardB || {}, { bytes: data });
-        if (Module.acPersistTravelSaveFile) Module.acPersistTravelSaveFile(data);
-        console.log("[Animal Crossing card] cleared travel memory_card for card " + slot);
+        if (!Module.acPersistTravelSaveFile || !Module.acPersistTravelSaveFile(filename, data)) {
+            console.error("[Animal Crossing card] failed to persist authorized card " + slot + " delete for " + filename);
+            return 0;
+        }
+        console.log("[Animal Crossing card] cleared authorized travel " + filename + " for card " + slot);
         return 1;
     }
     const files = Module.acSaveFiles || (Module.acSaveFiles = {});
@@ -276,6 +310,8 @@ static void ensure_dirs(void) {
 
 void CARDInit(void) {
     ensure_dirs();
+    card_async_clear(0);
+    card_async_clear(1);
 }
 
 s32 CARDMount(s32 chan, void* workArea, void* detachCallback) {
@@ -287,12 +323,14 @@ s32 CARDMount(s32 chan, void* workArea, void* detachCallback) {
 
 s32 CARDMountAsync(s32 chan, void* workArea, void* detachCb, void* attachCb) {
     s32 result = CARDMount(chan, workArea, detachCb);
+    if (result == CARD_RESULT_READY) card_async_accept(chan, result);
     if (attachCb) ((void (*)(s32, s32))attachCb)(chan, result);
     return result;
 }
 
 s32 CARDUnmount(s32 chan) {
     if (chan >= 0 && chan <= 1) card_mounted[chan] = 0;
+    card_async_clear(chan);
     return CARD_RESULT_READY;
 }
 
@@ -403,6 +441,7 @@ s32 CARDCreate(s32 chan, const char* fileName, u32 size, CARDFileInfo_PC* fileIn
 
 s32 CARDCreateAsync(s32 chan, const char* fileName, u32 size, void* fileInfo, void* callback) {
     s32 result = CARDCreate(chan, fileName, size, (CARDFileInfo_PC*)fileInfo);
+    if (result == CARD_RESULT_READY) card_async_accept(chan, result);
     if (callback) ((void (*)(s32, s32))callback)(chan, result);
     return result;
 }
@@ -423,8 +462,10 @@ s32 CARDRead(CARDFileInfo_PC* fileInfo, void* buf, s32 length, s32 offset) {
 }
 
 s32 CARDReadAsync(void* fileInfo, void* buf, s32 length, s32 offset, void* callback) {
-    s32 result = CARDRead((CARDFileInfo_PC*)fileInfo, buf, length, offset);
-    if (callback) ((void (*)(s32, s32))callback)(0, result);
+    CARDFileInfo_PC* info = (CARDFileInfo_PC*)fileInfo;
+    s32 result = CARDRead(info, buf, length, offset);
+    if (result == CARD_RESULT_READY) card_async_accept(info->chan, result);
+    if (callback) ((void (*)(s32, s32))callback)(info->chan, result);
     return result;
 }
 
@@ -459,8 +500,10 @@ s32 CARDWrite(CARDFileInfo_PC* fileInfo, const void* buf, s32 length, s32 offset
 }
 
 s32 CARDWriteAsync(void* fileInfo, const void* buf, s32 length, s32 offset, void* callback) {
-    s32 result = CARDWrite((CARDFileInfo_PC*)fileInfo, buf, length, offset);
-    if (callback) ((void (*)(s32, s32))callback)(0, result);
+    CARDFileInfo_PC* info = (CARDFileInfo_PC*)fileInfo;
+    s32 result = CARDWrite(info, buf, length, offset);
+    if (result == CARD_RESULT_READY) card_async_accept(info->chan, result);
+    if (callback) ((void (*)(s32, s32))callback)(info->chan, result);
     return result;
 }
 
@@ -480,11 +523,19 @@ s32 CARDDelete(s32 chan, const char* fileName) {
 
 s32 CARDDeleteAsync(s32 chan, const char* fileName, void* callback) {
     s32 result = CARDDelete(chan, fileName);
+    if (result == CARD_RESULT_READY) card_async_accept(chan, result);
     if (callback) ((void (*)(s32, s32))callback)(chan, result);
     return result;
 }
 
-s32 CARDGetResultCode(s32 chan) { return CARD_RESULT_READY; }
+s32 CARDGetResultCode(s32 chan) {
+    if (!card_chan_valid(chan)) return CARD_RESULT_NOCARD;
+    if (card_async_busy_ticks[chan] > 0) {
+        card_async_busy_ticks[chan]--;
+        return CARD_RESULT_BUSY;
+    }
+    return card_async_result[chan];
+}
 s32 CARDFreeBlocks(s32 chan, s32* byteNotUsed, s32* filesNotUsed) {
     if (byteNotUsed) *byteNotUsed = 1024 * 1024; /* 1 MB free */
     if (filesNotUsed) *filesNotUsed = 100;
@@ -506,6 +557,7 @@ s32 CARDProbe(s32 chan) { return CARD_RESULT_READY; }
 
 s32 CARDCheck(s32 chan) { return CARD_RESULT_READY; }
 s32 CARDCheckAsync(s32 chan, void* callback) {
+    card_async_accept(chan, CARD_RESULT_READY);
     if (callback) ((void (*)(s32, s32))callback)(chan, CARD_RESULT_READY);
     return CARD_RESULT_READY;
 }
@@ -538,6 +590,7 @@ s32 CARDSetStatus(s32 chan, s32 fileNo, CARDStat* stat) {
 }
 
 s32 CARDSetStatusAsync(s32 chan, s32 fileNo, void* stat, void* callback) {
+    card_async_accept(chan, CARD_RESULT_READY);
     if (callback) ((void (*)(s32, s32))callback)(chan, CARD_RESULT_READY);
     return CARD_RESULT_READY;
 }
@@ -566,12 +619,14 @@ s32 CARDRename(s32 chan, const char* oldName, const char* newName) {
 
 s32 CARDRenameAsync(s32 chan, const char* oldName, const char* newName, void* callback) {
     s32 result = CARDRename(chan, oldName, newName);
+    if (result == CARD_RESULT_READY) card_async_accept(chan, result);
     if (callback) ((void (*)(s32, s32))callback)(chan, result);
     return result;
 }
 
 s32 CARDFormat(s32 chan) { return CARD_RESULT_READY; }
 s32 CARDFormatAsync(s32 chan, void* callback) {
+    card_async_accept(chan, CARD_RESULT_READY);
     if (callback) ((void (*)(s32, s32))callback)(chan, CARD_RESULT_READY);
     return CARD_RESULT_READY;
 }
