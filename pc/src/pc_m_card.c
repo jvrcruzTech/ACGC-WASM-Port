@@ -1199,20 +1199,23 @@ static int pc_read_gci_land_info(const char* path, Save_t* out) {
 int mCD_CheckStation_bg(s32* chan) {
     int is_foreigner = mLd_PlayerManKindCheck();
 
+    WEB_LOG("[PC] CheckStation: is_foreigner=%d, player_no=%d", is_foreigner, Common_Get(player_no));
+
     if (is_foreigner) {
         Save_t temp_save;
         if (chan) *chan = mCD_SLOT_B;
         if (pc_read_gci_land_info(PC_GCI_PATH, &temp_save)) {
+            WEB_LOG("[PC] CheckStation(foreigner): read Card A save town_id=0x%04X, name='%.8s'", temp_save.land_info.id, temp_save.land_info.name);
             if (mLd_CheckId(temp_save.land_info.id) &&
                 !mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id)) {
-                OSReport("[PC] CheckStation: Card A has home town '%.*s' (id=0x%04X) — return available\n",
-                         8, temp_save.land_info.name, temp_save.land_info.id);
+                WEB_LOG("[PC] CheckStation: Card A has home town '%.*s' (id=0x%04X) — return available",
+                          8, temp_save.land_info.name, temp_save.land_info.id);
                 if (chan) *chan = mCD_SLOT_A;
                 return mCD_TRANS_ERR_NONE_NEXTLAND;
             }
-            OSReport("[PC] CheckStation: Card A has same town as current (unexpected)\n");
+            WEB_LOG("[PC] CheckStation: Card A has same town as current (unexpected)");
         } else {
-            OSReport("[PC] CheckStation: could not read Card A save\n");
+            WEB_LOG("[PC] CheckStation: could not read Card A save at '%s'", PC_GCI_PATH);
         }
         return mCD_TRANS_ERR_NONE;
     }
@@ -1222,11 +1225,11 @@ int mCD_CheckStation_bg(s32* chan) {
     {
         int prompt_res = pc_web_prompt_travel_card_b();
         if (prompt_res < 0) {
-            OSReport("[PC] CheckStation: waiting for travel Card B town\n");
+            WEB_LOG("[PC] CheckStation: waiting for travel Card B town");
             return mCD_TRANS_ERR_BUSY;
         }
         if (!prompt_res) {
-            OSReport("[PC] CheckStation: no travel Card B town loaded\n");
+            WEB_LOG("[PC] CheckStation: no travel Card B town loaded");
             return mCD_TRANS_ERR_NONE;
         }
     }
@@ -1236,14 +1239,14 @@ int mCD_CheckStation_bg(s32* chan) {
         if (pc_read_gci_land_info(l_card_b_gci_path, &temp_save)) {
             if (mLd_CheckId(temp_save.land_info.id)) {
                 if (!mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id)) {
-                    OSReport("[PC] CheckStation: Card B has town '%.*s' (id=0x%04X) — travel available\n",
+                    WEB_LOG("[PC] CheckStation: Card B has town '%.*s' (id=0x%04X) — travel available",
                              8, temp_save.land_info.name, temp_save.land_info.id);
                     if (chan) *chan = mCD_SLOT_B;
                     return mCD_TRANS_ERR_NONE_NEXTLAND;
                 }
-                OSReport("[PC] CheckStation: Card B has same town as Card A\n");
+                WEB_LOG("[PC] CheckStation: Card B has same town as Card A");
             } else {
-                OSReport("[PC] CheckStation: Card B has invalid land_info\n");
+                WEB_LOG("[PC] CheckStation: Card B has invalid land_info");
             }
         }
     }
@@ -1385,7 +1388,7 @@ int mCD_SaveStation_Passport_bg(s32* chan) {
     /* The passport is already built in l_mcd_foreigner_file from SaveStation_NextLand_bg.
      * On PC we don't need to write a separate passport GCI file — the foreigner data
      * persists in memory through the town transition (mCD_toNextLand). */
-    OSReport("[PC] SaveStation_Passport: passport ready in memory\n");
+    WEB_LOG("[PC] SaveStation_Passport: passport ready in memory");
     return mCD_TRANS_ERR_NONE;
 }
 
