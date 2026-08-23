@@ -200,8 +200,18 @@ void AIStopDMA(void) {
 }
 
 void pc_audio_set_paused(int paused) {
-    /* Currently unused */
-    if (audio_device != 0) SDL_PauseAudioDevice(audio_device, paused ? 1 : 0);
+    if (audio_device == 0) return;
+#ifdef __EMSCRIPTEN__
+    if (paused) {
+        SDL_PauseAudioDevice(audio_device, 1);
+        audio_device_started = 0;
+    } else if (audio_dma_running) {
+        SDL_PauseAudioDevice(audio_device, 0);
+        audio_device_started = 1;
+    }
+#else
+    SDL_PauseAudioDevice(audio_device, paused ? 1 : 0);
+#endif
 }
 
 u32  AIGetDMAStartAddr(void) { return 0; }

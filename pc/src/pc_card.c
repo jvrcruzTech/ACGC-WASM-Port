@@ -237,7 +237,9 @@ static int web_card_fetch_into(s32 chan, const char* filename, u8** out_data, s3
     if (!card_filename_safe(filename)) return 0;
     data = (u8*)malloc(capacity);
     if (!data) return 0;
+    if (chan == 1) pc_audio_set_paused(1);
     len = pc_web_card_fetch_js(chan, filename, (unsigned int)data, (unsigned int)capacity);
+    if (chan == 1) pc_audio_set_paused(0);
     if (len <= 0) {
         free(data);
         return 0;
