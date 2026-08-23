@@ -105,9 +105,9 @@ static void eDig_Hole_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
             pos.z = effect->position.z + RANDOM2_F(10.0f);
 
             if (effect->arg1 > 2) {
-                angle = mizutama_angle + (s16)(int)(RANDOM2_F(150.0f) * 182.04445f);
+                angle = mizutama_angle + S16_WRAP_FLOAT(RANDOM2_F(150.0f) * 182.04445f);
             } else {
-                angle = mizutama_angle + (s16)(int)(RANDOM2_F(90.0f) * 182.04445f);
+                angle = mizutama_angle + S16_WRAP_FLOAT(RANDOM2_F(90.0f) * 182.04445f);
             }
 
             mizutama_angle = angle;

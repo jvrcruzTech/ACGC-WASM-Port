@@ -766,7 +766,7 @@ static aMR_sit_data_c* aME_sit_data[] = {
 static void aMR_SitDownFurniture(MY_ROOM_ACTOR* my_room, aMR_contact_info_c* contact_info, PLAYER_ACTOR* player,
                                  GAME* game) {
     GAME_PLAY* play = (GAME_PLAY*)game;
-    int angle = (u16)((s16)(DEG2SHORT_ANGLE2(270.0f) + gamePT->mcon.move_angle + (s16)getCamera2AngleY(play)) -
+    int angle = (u16)(S16_WRAP_INT(DEG2SHORT_ANGLE2(270.0f) + gamePT->mcon.move_angle + (s16)getCamera2AngleY(play)) -
                       player->actor_class.shape_info.rotation.y);
 
     if (contact_info->contact_flag) {
@@ -1054,7 +1054,7 @@ static int aMR_CheckBedUnderfoot(aMR_contact_info_c* contact_info, PLAYER_ACTOR*
 static void aMR_JudgeGoToBed(MY_ROOM_ACTOR* my_room, aMR_contact_info_c* contact_info, PLAYER_ACTOR* player,
                              GAME* game) {
     GAME_PLAY* play = (GAME_PLAY*)game;
-    u16 angle = (s16)(DEG2SHORT_ANGLE2(270.0f) + gamePT->mcon.move_angle + (s16)getCamera2AngleY(play)) -
+    u16 angle = S16_WRAP_INT(DEG2SHORT_ANGLE2(270.0f) + gamePT->mcon.move_angle + (s16)getCamera2AngleY(play)) -
                 player->actor_class.shape_info.rotation.y;
 
     if (contact_info->contact_flag == TRUE) {

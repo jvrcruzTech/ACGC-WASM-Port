@@ -2156,7 +2156,7 @@ extern int Camera2_request_main_needlework_talk(GAME_PLAY* play, ACTOR* speaker,
     s16 angle_y;
     f32 diff_x = listener->eye.position.x - speaker->eye.position.x;
 
-    angle_y = (s16)(diff_x * (20.0f / 3.0f) + -32768.0f);
+    angle_y = S16_WRAP_FLOAT(diff_x * (20.0f / 3.0f) + -32768.0f);
 
     if (angle_y > 0) {
         angle_y = DEG2SHORT_ANGLE(-180.0f);

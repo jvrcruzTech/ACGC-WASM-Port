@@ -326,7 +326,7 @@ static int aSIGN_actor_set_target(SIGN_ACTOR* sign, GAME* game) {
 // TODO: fakematch? Why do these differ?
 #if VERSION == VER_GAFU01_00
                                         s16 d_angle_y =
-                                            (s16)(angle_y + DEG2SHORT_ANGLE2(180.0f)) - player_actor->shape_info.rotation.y;
+                                            S16_WRAP_INT(angle_y + DEG2SHORT_ANGLE2(180.0f)) - player_actor->shape_info.rotation.y;
 #else
                                             s16 d_angle_y =
                                                 (angle_y + DEG2SHORT_ANGLE2(180.0f)) - player_actor->shape_info.rotation.y;

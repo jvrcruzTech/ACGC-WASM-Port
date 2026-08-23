@@ -151,7 +151,7 @@ static void aHM1_think_main_proc(NPC_ACTOR* nactorx, GAME_PLAY* play) {
             if (actor->next_action != -1) {
                 next_act = actor->next_action;
             } else {
-                s16 move_angle = (s16)((RANDOM_F(1.0f) - 0.5f) * 65536.0f);
+                s16 move_angle = S16_WRAP_FLOAT((RANDOM_F(1.0f) - 0.5f) * 65536.0f);
                 s16 diff_angle;
 
                 nactorx->movement.mv_angl = move_angle;

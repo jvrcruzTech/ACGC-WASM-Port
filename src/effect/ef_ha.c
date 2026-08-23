@@ -32,7 +32,7 @@ static void eHA_init(xyz_t pos, int prio, s16 angle, GAME* game, u16 item_name, 
 static void eHA_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
     GAME_PLAY* play = (GAME_PLAY*)game;
     s16* ang_p = (s16*)ct_arg;
-    u16 angle = *ang_p - (s16)((s16)getCamera2AngleY(play) + DEG2SHORT_ANGLE2(180));
+    u16 angle = *ang_p - (u16)((u16)getCamera2AngleY(play) + 0x8000u);
 
     effect->scale.x = 0.0067f;
     effect->scale.y = 0.0067f;

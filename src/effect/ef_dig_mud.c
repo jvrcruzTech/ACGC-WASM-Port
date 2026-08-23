@@ -65,7 +65,7 @@ static void eDig_Mud_init(xyz_t pos, int prio, s16 angle, GAME* game, u16 item_n
 static void eDig_Mud_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
     s16* angle_p = (s16*)ct_arg;
     s16 angle_y = *angle_p;
-    s16 angle_x = (s16)(int)((-60.0f + RANDOM2_F(20.0f)) * 182.04445f);
+    s16 angle_x = S16_WRAP_FLOAT((-60.0f + RANDOM2_F(20.0f)) * 182.04445f);
     f32 cos_x = cos_s(angle_x);
     f32 speed = -3.5f + RANDOM2_F(4.5f) * 0.5f;
 
@@ -100,7 +100,7 @@ static void eDig_Mud_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
         effect->velocity.y = speed * sin_s(angle_x);
         effect->velocity.z = (speed * cos_x) * cos_s(angle_y);
     } else if (effect->arg1 < 6) {
-        angle_y += (s16)(int)((120.0f * effect->arg1) * 182.04445f);
+        angle_y += S16_WRAP_FLOAT((120.0f * effect->arg1) * 182.04445f);
 
         effect->velocity.x = 0.4f * sin_s(angle_y);
         effect->velocity.y = 1.75f + fqrand();

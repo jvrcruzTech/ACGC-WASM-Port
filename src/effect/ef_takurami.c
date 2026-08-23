@@ -52,12 +52,17 @@ static void eTM_init(xyz_t pos, int prio, s16 angle, GAME* game, u16 item_name, 
 }
 
 static void eTM_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
-    s16 angle_y, angle;
+    eTM_data_c* data = (eTM_data_c*)ct_arg;
+    u16 angle_y;
     u16 angle_diff;
 
-    angle_y = (s16)getCamera2AngleY((GAME_PLAY*)game) + DEG2SHORT_ANGLE(180.0f);
-    angle = ((eTM_data_c*)ct_arg)->angle;
-    angle_diff = angle - angle_y;
+    if (data == NULL) {
+        effect->timer = 0;
+        return;
+    }
+
+    angle_y = (u16)((u16)getCamera2AngleY((GAME_PLAY*)game) + 0x8000u);
+    angle_diff = (u16)((u16)data->angle - angle_y);
 
     effect->acceleration.x = effect->position.x;
     effect->acceleration.y = effect->position.y;
@@ -72,11 +77,11 @@ static void eTM_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
 
     effect->timer = 54;
 
-    effect->effect_specific[2] = ((eTM_data_c*)ct_arg)->prio;
-    effect->effect_specific[1] = ((eTM_data_c*)ct_arg)->angle;
-    effect->effect_specific[3] = ((eTM_data_c*)ct_arg)->item_name;
+    effect->effect_specific[2] = data->prio;
+    effect->effect_specific[1] = data->angle;
+    effect->effect_specific[3] = data->item_name;
 
-    if (angle_diff >= DEG2SHORT_ANGLE2(180.0f)) {
+    if (angle_diff >= 0x8000u) {
         effect->effect_specific[0] = 0;
         effect->offset.x += 15.0f;
     } else {

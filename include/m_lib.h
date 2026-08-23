@@ -32,10 +32,13 @@ extern "C" {
 /* Float modulo operator */
 #define MOD_F(a, m) (a - (int)((a) * (1.0f / (m))) * (m))
 
+#define S16_WRAP_INT(v) ((s16)(u16)(int)(v))
+#define S16_WRAP_FLOAT(v) S16_WRAP_INT(v)
+
 /* radians -> short angle */
-#define RAD2SHORT_ANGLE(rad) ((s16)(int)((rad) * (65536.0f / (2.0f * F_PI))))
-#define RAD2SHORTANGLE(rad) ((s16)((32768.0f / F_PI) * ((f32)(rad))))
-#define RAD2SHORT_ANGLE2(rad) ((s16)((rad) * (65536.0f / (2.0f * F_PI))))
+#define RAD2SHORT_ANGLE(rad) S16_WRAP_FLOAT((rad) * (65536.0f / (2.0f * F_PI)))
+#define RAD2SHORTANGLE(rad) S16_WRAP_FLOAT((32768.0f / F_PI) * ((f32)(rad)))
+#define RAD2SHORT_ANGLE2(rad) S16_WRAP_FLOAT((rad) * (65536.0f / (2.0f * F_PI)))
 
 /* short angle -> radians */
 #define SHORT2RAD_ANGLE(s) ((((f32)(s)) / (65536.0f / (2.0f * F_PI))))
@@ -43,7 +46,7 @@ extern "C" {
 #define SHORTANGLE2RAD(sangle) ((F_PI / 32768.0f) * ((f32)(sangle)))
 
 /* degrees -> short angle */
-#define DEG2SHORT_ANGLE(deg) ((s16)((deg) * (65536.0f / 360.0f)))
+#define DEG2SHORT_ANGLE(deg) S16_WRAP_FLOAT((deg) * (65536.0f / 360.0f))
 #define DEG2SHORT_ANGLE2(deg) ((int)((deg) * (65536.0f / 360.0f)))
 #define DEG2SHORT_ANGLE3(deg) ((deg) * (65536.0f / 360.0f))
 

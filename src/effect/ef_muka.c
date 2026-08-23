@@ -34,7 +34,7 @@ static void eMK_ct(eEC_Effect_c* effect, GAME* game, void* ct_arg) {
 
     angle_y = (s16)getCamera2AngleY((GAME_PLAY*)game);
     angle = *(s16*)ct_arg;
-    if (DIFF_USHORT_ANGLE(angle, (s16)(angle_y + DEG2SHORT_ANGLE(180.0f))) > DEG2SHORT_ANGLE2(180.0f)) {
+    if (DIFF_USHORT_ANGLE(angle, S16_WRAP_INT((u16)angle_y + 0x8000u)) > DEG2SHORT_ANGLE2(180.0f)) {
         effect->offset.x = -10.0f;
     } else {
         effect->offset.x = 10.0f;

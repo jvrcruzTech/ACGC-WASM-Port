@@ -84,7 +84,7 @@ static void aGRBL_KorokoroMove(aGRGR_ball_c* ball, GAME* game) {
     if (ball->hit_wall) {
         s16 diff;
 
-        diff = (s16)(ball->angle + DEG2SHORT_ANGLE2(180.0f)) - ball->hit_wall_angle;
+        diff = S16_WRAP_INT(ball->angle + DEG2SHORT_ANGLE2(180.0f)) - ball->hit_wall_angle;
         ball->angle -= diff;
         ball->vel_xz *= 0.985f;
     }

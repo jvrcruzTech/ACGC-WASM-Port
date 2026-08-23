@@ -1660,7 +1660,7 @@ static void bIT_actor_drop_move_fly(bg_item_drop_c* drop) {
         f32 percent_y = dist_y / drop->total_distance_y;
         f32 temp0 = scale * 65536.0f;
         int dir0 = (int)(temp0 * (1.0f / 65536.0f));
-        s16 angle = (s16)(temp0 - dir0 * 65536.0f);
+        s16 angle = S16_WRAP_FLOAT(temp0 - dir0 * 65536.0f);
 
         drop->offset.x = 18.0f * sin_s(angle) * percent_y;
     }

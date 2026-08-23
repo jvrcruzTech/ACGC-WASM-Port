@@ -199,7 +199,7 @@ static void aHN0_think_main_proc(NPC_ACTOR* nactorx, GAME_PLAY* play) {
                     nactorx->draw.loop_flag = 2;
                     next_act = aHN0_ACT_HURRAHS;
                 } else {
-                    s16 move_angle = (s16)((RANDOM_F(1.0f) - 0.5f) * 65536.0f);
+                    s16 move_angle = S16_WRAP_FLOAT((RANDOM_F(1.0f) - 0.5f) * 65536.0f);
                     s16 diff_angle;
 
                     nactorx->movement.mv_angl = move_angle;
