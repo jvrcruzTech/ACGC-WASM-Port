@@ -51,6 +51,10 @@ static s8 s_web_substick_y = 0;
 static u8 s_web_trigger_l = 0;
 static u8 s_web_trigger_r = 0;
 
+int pc_web_is_pad_frozen(void) {
+    return s_web_pad_frozen;
+}
+
 EMSCRIPTEN_KEEPALIVE
 void pc_web_set_pad_frozen(int frozen) {
     s_web_pad_frozen = frozen;

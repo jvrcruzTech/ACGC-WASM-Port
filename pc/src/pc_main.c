@@ -180,12 +180,21 @@ void pc_platform_swap_buffers(void) {
     SDL_GL_SwapWindow(g_pc_window);
 }
 
+#ifdef __EMSCRIPTEN__
+extern int pc_web_is_pad_frozen(void);
+#endif
+
 int pc_platform_poll_events(void) {
     SDL_Event event;
 
     pc_typing_update();
 
     while (SDL_PollEvent(&event)) {
+#ifdef __EMSCRIPTEN__
+        if (pc_web_is_pad_frozen()) {
+            continue;
+        }
+#endif
         switch (event.type) {
             case SDL_QUIT:
                 g_pc_running = 0;
