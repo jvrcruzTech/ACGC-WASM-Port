@@ -429,6 +429,9 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
 
 #ifdef __EMSCRIPTEN__
     {
+        const char* slash = strrchr(gci_path, '/');
+        const char* filename = slash ? slash + 1 : gci_path;
+        int chan = strstr(gci_path, PC_CARD_B_DIR) ? 1 : 0;
         u8* gci_bytes = (u8*)malloc(GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE);
         if (!gci_bytes) {
             free(file_data);
@@ -436,15 +439,15 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         }
         memcpy(gci_bytes, &dir_hdr, GCI_HEADER_SIZE);
         memcpy(gci_bytes + GCI_HEADER_SIZE, file_data, GCI_FILE_DATA_SIZE);
-        if (!pc_web_card_store_file(0, PC_GCI_FILENAME, gci_bytes, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
-            OSReport("[PC] GCI save: web byte upload failed\n");
+        if (!pc_web_card_store_file(chan, filename, gci_bytes, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
+            OSReport("[PC] GCI save: web byte upload failed for card %d file '%s'\n", chan, filename);
             free(gci_bytes);
             free(file_data);
             return FALSE;
         }
         free(gci_bytes);
         free(file_data);
-        OSReport("[PC] GCI save: uploaded %s as raw bytes\n", PC_GCI_FILENAME);
+        OSReport("[PC] GCI save: uploaded card %d file '%s' as raw bytes\n", chan, filename);
         return TRUE;
     }
 #else
@@ -1108,9 +1111,14 @@ int mCD_SaveHome_bg(int param_1, int* chan) {
 
     pc_save_pre_write_side_effects(param_1);
 
-    if (slot == mCD_SLOT_B && l_card_b_gci_path[0] != '\0') {
+    if (slot == mCD_SLOT_B) {
         /* Visiting Card B's town — save to Card B GCI */
         char tmp_path[300];
+        if (l_card_b_gci_path[0] == '\0') {
+            OSReport("[PC] mCD_SaveHome_bg: current land is Card B, but no Card B path is cached\n");
+            if (chan) *chan = mCD_SLOT_B;
+            return mCD_TRANS_ERR_IOERROR;
+        }
         snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", l_card_b_gci_path);
         result = pc_save_write_gci_to(l_card_b_gci_path, tmp_path);
         if (chan) *chan = mCD_SLOT_B;

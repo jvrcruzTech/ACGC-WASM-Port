@@ -210,6 +210,9 @@ EM_JS(void, pc_web_card_release_travel_js, (void), {
         Module.acTravelCardB.bytes = null;
         Module.acTravelCardB = null;
     }
+    if (Module.acTravelCardBPrompt) {
+        Module.acTravelCardBPrompt.status = "idle";
+    }
     const sockets = self.__ACGC_TRAVEL_SOCKETS__ || [];
     while (sockets.length) {
         const socket = sockets.pop();
