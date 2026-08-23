@@ -960,6 +960,10 @@ EM_JS(int, pc_web_prompt_travel_card_b_js, (void), {
     };
 
     if (Module.acTravelCardB && Module.acTravelCardB.bytes) return 1;
+    if (state.status === "canceled") {
+        state.status = "idle";
+        return -2;
+    }
     if (state.status === "loading") return -1;
     if (state.status === "failed") {
         state.status = "idle";
@@ -1225,6 +1229,11 @@ int mCD_CheckStation_bg(s32* chan) {
 #ifdef __EMSCRIPTEN__
     {
         int prompt_res = pc_web_prompt_travel_card_b();
+        if (prompt_res == -2) {
+            WEB_LOG("[PC] CheckStation: travel Card B prompt canceled");
+            if (chan) *chan = mCD_SLOT_B;
+            return mCD_TRANS_ERR_NO_TOWN_DATA;
+        }
         if (prompt_res < 0) {
             WEB_LOG("[PC] CheckStation: waiting for travel Card B town");
             return mCD_TRANS_ERR_BUSY;
