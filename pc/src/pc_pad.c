@@ -83,6 +83,21 @@ BOOL PADInit(void) {
 u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
+#ifdef __EMSCRIPTEN__
+    /* If pad is frozen by Web UI (Z-index > 0 modal open), return 0 inputs immediately */
+    if (s_web_pad_frozen) {
+        status[0].button = 0;
+        status[0].stickX = 0;
+        status[0].stickY = 0;
+        status[0].substickX = 0;
+        status[0].substickY = 0;
+        status[0].triggerLeft = 0;
+        status[0].triggerRight = 0;
+        status[0].err = 0;
+        return PAD_CHAN0_BIT;
+    }
+#endif
+
     const u8* keys = SDL_GetKeyboardState(NULL);
     u32 mouse = SDL_GetMouseState(NULL, NULL);
     u16 buttons = 0;
@@ -195,19 +210,6 @@ u32 PADRead(PADStatus* status) {
     }
 
 #ifdef __EMSCRIPTEN__
-    /* If pad is frozen by Web UI (Z-index > 0 modal open), override all inputs to 0 */
-    if (s_web_pad_frozen) {
-        status[0].button = 0;
-        status[0].stickX = 0;
-        status[0].stickY = 0;
-        status[0].substickX = 0;
-        status[0].substickY = 0;
-        status[0].triggerLeft = 0;
-        status[0].triggerRight = 0;
-        status[0].err = 0;
-        return PAD_CHAN0_BIT;
-    }
-
     /* Merge Web JS input shim state */
     buttons |= s_web_pad_buttons;
     if (s_web_stick_x != 0) stickX = s_web_stick_x;
