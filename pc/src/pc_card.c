@@ -150,15 +150,7 @@ EM_JS(int, pc_web_card_fetch_js, (int chan, const char* filename_ptr, unsigned i
         if (Module.acTravelCardB && Module.acTravelCardB.bytes) {
             return loadTravelCard(Module.acTravelCardB);
         }
-        if (!Module.acPromptTravelCode || !Asyncify || !Asyncify.handleSleep) return 0;
-        return Asyncify.handleSleep(function(wakeUp) {
-            Module.acPromptTravelCode().then(function(result) {
-                wakeUp(loadTravelCard(result));
-            }).catch(function(err) {
-                console.error("[Animal Crossing card] travel code prompt failed", err);
-                wakeUp(0);
-            });
-        });
+        return 0;
     }
     const entry = (Module.acSaveFiles || {})["memory_card"];
     if (!entry || !entry.bytes) return 0;
@@ -237,9 +229,7 @@ static int web_card_fetch_into(s32 chan, const char* filename, u8** out_data, s3
     if (!card_filename_safe(filename)) return 0;
     data = (u8*)malloc(capacity);
     if (!data) return 0;
-    if (chan == 1) pc_audio_set_paused(1);
     len = pc_web_card_fetch_js(chan, filename, (unsigned int)data, (unsigned int)capacity);
-    if (chan == 1) pc_audio_set_paused(0);
     if (len <= 0) {
         free(data);
         return 0;

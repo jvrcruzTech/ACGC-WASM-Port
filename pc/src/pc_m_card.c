@@ -26,6 +26,7 @@
 #include "zurumode.h"
 #include "pc_save_bswap.h"
 #include "pc_settings.h"
+#include "pc_platform.h"
 #include "m_cockroach.h"
 #include "m_all_grow_ovl.h"
 #include "m_home.h"
@@ -42,6 +43,9 @@
 #include <direct.h>  /* _mkdir */
 #endif
 #include <dolphin/os.h>  /* OSReport */
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 /* --- Path constants --- */
 #define PC_CARD_A_DIR     "save/card_a"
@@ -87,9 +91,7 @@ extern int pc_card_scan_for_gci(int chan, char* out_path, int out_size);
 #ifdef __EMSCRIPTEN__
 extern int pc_web_card_load_file(s32 chan, const char* filename, u8** out_data, s32* out_len);
 extern int pc_web_card_store_file(s32 chan, const char* filename, const u8* data, s32 len);
-#ifdef __EMSCRIPTEN__
 extern void pc_web_card_release_travel(void);
-#endif
 #endif
 
 /* External: functions from decomp used in mCD_toNextLand */
@@ -924,6 +926,46 @@ int pc_save_check_and_load(void) {
 
 /* --- Card B scanning --- */
 
+#ifdef __EMSCRIPTEN__
+EM_JS(int, pc_web_prompt_travel_card_b_js, (void), {
+    const loadTravelCard = (result) => {
+        const bytes = result && result.bytes;
+        if (!bytes || !bytes.length) return 0;
+        if (bytes.length < 467008 || bytes[0] !== 0x47 || bytes[1] !== 0x41 || bytes[2] !== 0x46) {
+            console.error("[Animal Crossing card] travel memory_card is not a usable Animal Crossing GCI");
+            return 0;
+        }
+        Module.acTravelCardB = {
+            bytes: bytes,
+            save: result.save || null,
+            token: result.token || ""
+        };
+        console.log("[Animal Crossing card] loaded travel memory_card for card b (" + bytes.length + " bytes)");
+        return 1;
+    };
+
+    if (Module.acTravelCardB && Module.acTravelCardB.bytes) return 1;
+    if (!Module.acPromptTravelCode || !Asyncify || !Asyncify.handleSleep) return 0;
+
+    return Asyncify.handleSleep(function(wakeUp) {
+        Module.acPromptTravelCode().then(function(result) {
+            wakeUp(loadTravelCard(result));
+        }).catch(function(err) {
+            console.error("[Animal Crossing card] travel code prompt failed", err);
+            wakeUp(0);
+        });
+    });
+});
+
+static int pc_web_prompt_travel_card_b(void) {
+    int loaded;
+    pc_audio_set_paused(1);
+    loaded = pc_web_prompt_travel_card_b_js();
+    pc_audio_set_paused(0);
+    return loaded;
+}
+#endif
+
 /* Check if Card B directory has a valid AC town GCI */
 static int pc_card_b_find_town(void) {
     if (pc_card_scan_for_gci(1, l_card_b_gci_path, sizeof(l_card_b_gci_path))) {
@@ -1157,6 +1199,12 @@ int mCD_CheckStation_bg(s32* chan) {
     }
 
     if (chan) *chan = mCD_SLOT_A;
+#ifdef __EMSCRIPTEN__
+    if (!pc_web_prompt_travel_card_b()) {
+        OSReport("[PC] CheckStation: no travel Card B town loaded\n");
+        return mCD_TRANS_ERR_NONE;
+    }
+#endif
     if (pc_card_b_find_town()) {
         Save_t temp_save;
         if (pc_read_gci_land_info(l_card_b_gci_path, &temp_save)) {
