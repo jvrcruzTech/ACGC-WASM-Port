@@ -15,6 +15,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #define WEB_LOG(...) emscripten_log(EM_LOG_CONSOLE, __VA_ARGS__)
+extern int pc_web_is_pad_frozen(void);
 #else
 #define WEB_LOG(...) ((void)0)
 #endif
@@ -180,10 +181,6 @@ void pc_platform_swap_buffers(void) {
     SDL_GL_SwapWindow(g_pc_window);
 }
 
-#ifdef __EMSCRIPTEN__
-extern int pc_web_is_pad_frozen(void);
-#endif
-
 int pc_platform_poll_events(void) {
     SDL_Event event;
 
@@ -191,9 +188,9 @@ int pc_platform_poll_events(void) {
 
     while (SDL_PollEvent(&event)) {
 #ifdef __EMSCRIPTEN__
-        if (pc_web_is_pad_frozen()) {
-            continue;
-        }
+        int frozen = pc_web_is_pad_frozen();
+#else
+        int frozen = 0;
 #endif
         switch (event.type) {
             case SDL_QUIT:
@@ -205,6 +202,7 @@ int pc_platform_poll_events(void) {
                 }
                 break;
             case SDL_KEYDOWN:
+                if (frozen) break;
                 /* Keybinding capture eats all input first (works from both
                  * the pause menu and the title Options menu). */
                 if (pc_settings_menu_capture_active()) {
@@ -230,11 +228,13 @@ int pc_platform_poll_events(void) {
                 pc_typing_handle_event(&event);
                 break;
             case SDL_MOUSEBUTTONDOWN:
+                if (frozen) break;
                 if (pc_settings_menu_capture_active()) {
                     pc_settings_menu_handle_capture_event(&event);
                 }
                 break;
             case SDL_CONTROLLERBUTTONDOWN:
+                if (frozen) break;
                 if (pc_settings_menu_capture_active()) {
                     pc_settings_menu_handle_capture_event(&event);
                     break;
@@ -249,6 +249,7 @@ int pc_platform_poll_events(void) {
                 }
                 break;
             case SDL_CONTROLLERAXISMOTION:
+                if (frozen) break;
                 if (pc_settings_menu_capture_active()) {
                     pc_settings_menu_handle_capture_event(&event);
                     break;
@@ -258,7 +259,7 @@ int pc_platform_poll_events(void) {
                 }
                 break;
             case SDL_TEXTINPUT:
-                if (g_pc_paused) break;
+                if (frozen || g_pc_paused) break;
                 pc_typing_handle_event(&event);
                 break;
         }
