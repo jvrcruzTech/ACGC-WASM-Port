@@ -42,6 +42,7 @@ static u8 pad_trigger_value(PCPadCode code) {
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 
+static int s_web_pad_frozen = 0;
 static u16 s_web_pad_buttons = 0;
 static s8 s_web_stick_x = 0;
 static s8 s_web_stick_y = 0;
@@ -49,6 +50,11 @@ static s8 s_web_substick_x = 0;
 static s8 s_web_substick_y = 0;
 static u8 s_web_trigger_l = 0;
 static u8 s_web_trigger_r = 0;
+
+EMSCRIPTEN_KEEPALIVE
+void pc_web_set_pad_frozen(int frozen) {
+    s_web_pad_frozen = frozen;
+}
 
 EMSCRIPTEN_KEEPALIVE
 void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 substickY, u8 triggerL, u8 triggerR) {
@@ -63,7 +69,6 @@ void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 su
 #endif
 
 BOOL PADInit(void) {
-#ifndef __EMSCRIPTEN__
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -72,35 +77,18 @@ BOOL PADInit(void) {
             }
         }
     }
-#endif
     return TRUE;
 }
 
 u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
-#ifdef __EMSCRIPTEN__
-#ifdef KEYBOARD_TYPING
-    if (g_pc_typing_mode && g_pc_editor_active) {
-        status[0].err = 0;
-        return PAD_CHAN0_BIT;
-    }
-#endif
-    status[0].button = s_web_pad_buttons;
-    status[0].stickX = s_web_stick_x;
-    status[0].stickY = s_web_stick_y;
-    status[0].substickX = s_web_substick_x;
-    status[0].substickY = s_web_substick_y;
-    status[0].triggerLeft = s_web_trigger_l;
-    status[0].triggerRight = s_web_trigger_r;
-    status[0].err = 0;
-    return PAD_CHAN0_BIT;
-#else
     const u8* keys = SDL_GetKeyboardState(NULL);
     u32 mouse = SDL_GetMouseState(NULL, NULL);
     u16 buttons = 0;
     s8 stickX = 0, stickY = 0;
     s8 cstickX = 0, cstickY = 0;
+    u8 triggerL = 0, triggerR = 0;
 
     /* Suppress keyboard-to-button mapping when typing into the in-game text editor */
     if (!(g_pc_typing_mode && g_pc_editor_active)) {
@@ -202,19 +190,44 @@ u32 PADRead(PADStatus* status) {
             cstickY = (s8)sry;
         }
 
-        status[0].triggerLeft  = pad_trigger_value(pb->l);
-        status[0].triggerRight = pad_trigger_value(pb->r);
+        triggerL = pad_trigger_value(pb->l);
+        triggerR = pad_trigger_value(pb->r);
     }
+
+#ifdef __EMSCRIPTEN__
+    /* If pad is frozen by Web UI (Z-index > 0 modal open), override all inputs to 0 */
+    if (s_web_pad_frozen) {
+        status[0].button = 0;
+        status[0].stickX = 0;
+        status[0].stickY = 0;
+        status[0].substickX = 0;
+        status[0].substickY = 0;
+        status[0].triggerLeft = 0;
+        status[0].triggerRight = 0;
+        status[0].err = 0;
+        return PAD_CHAN0_BIT;
+    }
+
+    /* Merge Web JS input shim state */
+    buttons |= s_web_pad_buttons;
+    if (s_web_stick_x != 0) stickX = s_web_stick_x;
+    if (s_web_stick_y != 0) stickY = s_web_stick_y;
+    if (s_web_substick_x != 0) cstickX = s_web_substick_x;
+    if (s_web_substick_y != 0) cstickY = s_web_substick_y;
+    if (s_web_trigger_l != 0) triggerL = s_web_trigger_l;
+    if (s_web_trigger_r != 0) triggerR = s_web_trigger_r;
+#endif
 
     status[0].button = buttons;
     status[0].stickX = stickX;
     status[0].stickY = stickY;
     status[0].substickX = cstickX;
     status[0].substickY = cstickY;
+    status[0].triggerLeft = triggerL;
+    status[0].triggerRight = triggerR;
     status[0].err = 0; /* PAD_ERR_NONE */
 
     return PAD_CHAN0_BIT; /* Controller 1 connected */
-#endif
 }
 
 void PADControlMotor(s32 chan, u32 command) {

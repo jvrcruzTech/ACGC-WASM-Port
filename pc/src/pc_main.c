@@ -181,7 +181,6 @@ void pc_platform_swap_buffers(void) {
 }
 
 int pc_platform_poll_events(void) {
-#ifndef __EMSCRIPTEN__
     SDL_Event event;
 
     pc_typing_update();
@@ -255,7 +254,6 @@ int pc_platform_poll_events(void) {
                 break;
         }
     }
-#endif
     return 1;
 }
 
