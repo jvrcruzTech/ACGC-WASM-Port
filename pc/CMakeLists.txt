@@ -453,7 +453,7 @@ if(TARGET_WEB OR EMSCRIPTEN)
         -sEMULATE_FUNCTION_POINTER_CASTS=1
         -sFETCH=1
         -sINVOKE_RUN=0
-        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_pc_web_rom_alloc,_pc_web_rom_free
+        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_pc_web_rom_alloc,_pc_web_rom_free,_pc_web_set_pad_state
         -sEXPORTED_RUNTIME_METHODS=FS,callMain,HEAPU8
         -sFORCE_FILESYSTEM=1
         --profiling-funcs

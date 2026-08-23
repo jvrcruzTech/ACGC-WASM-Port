@@ -39,7 +39,31 @@ static u8 pad_trigger_value(PCPadCode code) {
     return SDL_GameControllerGetButton(g_controller, (SDL_GameControllerButton)code) ? 255 : 0;
 }
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+
+static u16 s_web_pad_buttons = 0;
+static s8 s_web_stick_x = 0;
+static s8 s_web_stick_y = 0;
+static s8 s_web_substick_x = 0;
+static s8 s_web_substick_y = 0;
+static u8 s_web_trigger_l = 0;
+static u8 s_web_trigger_r = 0;
+
+EMSCRIPTEN_KEEPALIVE
+void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 substickY, u8 triggerL, u8 triggerR) {
+    s_web_pad_buttons = buttons;
+    s_web_stick_x = stickX;
+    s_web_stick_y = stickY;
+    s_web_substick_x = substickX;
+    s_web_substick_y = substickY;
+    s_web_trigger_l = triggerL;
+    s_web_trigger_r = triggerR;
+}
+#endif
+
 BOOL PADInit(void) {
+#ifndef __EMSCRIPTEN__
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -48,12 +72,24 @@ BOOL PADInit(void) {
             }
         }
     }
+#endif
     return TRUE;
 }
 
 u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
+#ifdef __EMSCRIPTEN__
+    status[0].button = s_web_pad_buttons;
+    status[0].stickX = s_web_stick_x;
+    status[0].stickY = s_web_stick_y;
+    status[0].substickX = s_web_substick_x;
+    status[0].substickY = s_web_substick_y;
+    status[0].triggerLeft = s_web_trigger_l;
+    status[0].triggerRight = s_web_trigger_r;
+    status[0].err = 0;
+    return PAD_CHAN0_BIT;
+#else
     const u8* keys = SDL_GetKeyboardState(NULL);
     u32 mouse = SDL_GetMouseState(NULL, NULL);
     u16 buttons = 0;
@@ -172,6 +208,7 @@ u32 PADRead(PADStatus* status) {
     status[0].err = 0; /* PAD_ERR_NONE */
 
     return PAD_CHAN0_BIT; /* Controller 1 connected */
+#endif
 }
 
 void PADControlMotor(s32 chan, u32 command) {
