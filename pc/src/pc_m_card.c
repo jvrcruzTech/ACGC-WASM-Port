@@ -1207,7 +1207,7 @@ int mCD_CheckStation_bg(s32* chan) {
         if (pc_read_gci_land_info(PC_GCI_PATH, &temp_save)) {
             WEB_LOG("[PC] CheckStation(foreigner): read Card A save town_id=0x%04X, name='%.8s'", temp_save.land_info.id, temp_save.land_info.name);
             if (mLd_CheckId(temp_save.land_info.id) &&
-                !mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id)) {
+                (!mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id) || 1)) {
                 WEB_LOG("[PC] CheckStation: Card A has home town '%.*s' (id=0x%04X) — return available",
                           8, temp_save.land_info.name, temp_save.land_info.id);
                 if (chan) *chan = mCD_SLOT_A;
@@ -1238,7 +1238,7 @@ int mCD_CheckStation_bg(s32* chan) {
         Save_t temp_save;
         if (pc_read_gci_land_info(l_card_b_gci_path, &temp_save)) {
             if (mLd_CheckId(temp_save.land_info.id)) {
-                if (!mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id)) {
+                if (!mLd_CheckThisLand(temp_save.land_info.name, temp_save.land_info.id) || 1) {
                     WEB_LOG("[PC] CheckStation: Card B has town '%.*s' (id=0x%04X) — travel available",
                              8, temp_save.land_info.name, temp_save.land_info.id);
                     if (chan) *chan = mCD_SLOT_B;
