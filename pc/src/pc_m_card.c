@@ -322,6 +322,8 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
     u16 checksum;
     u8* others_ptr;
 
+    OSReport("[PC] pc_save_write_gci_to: path='%s', pc_save_ready=%d\n", gci_path, pc_save_ready);
+
     if (!pc_save_ready) return TRUE;
 
 #ifndef __EMSCRIPTEN__
@@ -439,6 +441,8 @@ static int pc_save_write_gci_to(const char* gci_path, const char* tmp_path) {
         }
         memcpy(gci_bytes, &dir_hdr, GCI_HEADER_SIZE);
         memcpy(gci_bytes + GCI_HEADER_SIZE, file_data, GCI_FILE_DATA_SIZE);
+        OSReport("[PC] pc_save_write_gci_to: dispatching to pc_web_card_store_file (chan=%d, filename='%s', size=%d)\n",
+                 chan, filename, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE);
         if (!pc_web_card_store_file(chan, filename, gci_bytes, GCI_HEADER_SIZE + GCI_FILE_DATA_SIZE)) {
             OSReport("[PC] GCI save: web byte upload failed for card %d file '%s'\n", chan, filename);
             free(gci_bytes);
