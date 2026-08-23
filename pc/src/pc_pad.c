@@ -42,7 +42,6 @@ static u8 pad_trigger_value(PCPadCode code) {
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 
-static int s_web_pad_ready = 0;
 static u16 s_web_pad_buttons = 0;
 static s8 s_web_stick_x = 0;
 static s8 s_web_stick_y = 0;
@@ -53,7 +52,6 @@ static u8 s_web_trigger_r = 0;
 
 EMSCRIPTEN_KEEPALIVE
 void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 substickY, u8 triggerL, u8 triggerR) {
-    if (!s_web_pad_ready) return;
     s_web_pad_buttons = buttons;
     s_web_stick_x = stickX;
     s_web_stick_y = stickY;
@@ -65,9 +63,7 @@ void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 su
 #endif
 
 BOOL PADInit(void) {
-#ifdef __EMSCRIPTEN__
-    s_web_pad_ready = 1;
-#else
+#ifndef __EMSCRIPTEN__
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -84,10 +80,6 @@ u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
 #ifdef __EMSCRIPTEN__
-    if (!s_web_pad_ready) {
-        status[0].err = 0;
-        return PAD_CHAN0_BIT;
-    }
 #ifdef KEYBOARD_TYPING
     if (g_pc_typing_mode && g_pc_editor_active) {
         status[0].err = 0;
@@ -237,9 +229,7 @@ void PADControlAllMotors(const u32* commands) {
 }
 
 void PADCleanup(void) {
-#ifdef __EMSCRIPTEN__
-    s_web_pad_ready = 0;
-#else
+#ifndef __EMSCRIPTEN__
     if (g_controller) {
         SDL_GameControllerClose(g_controller);
         g_controller = NULL;
