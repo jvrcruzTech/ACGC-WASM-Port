@@ -36,6 +36,9 @@ static SDL_AudioDeviceID audio_device = 0;
 static int audio_device_requested = 0;
 static int audio_device_failed = 0;
 static int audio_dma_running = 0;
+static int audio_device_started = 0;
+static SDL_atomic_t audio_underrun_count;
+static SDL_atomic_t audio_overrun_count;
 #endif
 
 typedef void (*AIDMACallback)(void);
@@ -112,6 +115,9 @@ static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
 
     /* overrun: producer lapped us */
     if (used > RING_BUF_SAMPLES) {
+#ifdef __EMSCRIPTEN__
+        SDL_AtomicAdd(&audio_overrun_count, 1);
+#endif
         rp = wp - RING_BUF_SAMPLES;
         rp &= ~1u; /* stereo-align */
         used = wp - rp;
@@ -126,6 +132,9 @@ static void pc_audio_callback(void* userdata, Uint8* stream, int len) {
         out[i] = ring_buffer[(rp + i) & RING_BUF_MASK];
     }
     if (copy < total_samples) {
+#ifdef __EMSCRIPTEN__
+        SDL_AtomicAdd(&audio_underrun_count, 1);
+#endif
         memset(&out[copy], 0, (total_samples - copy) * sizeof(s16));
     }
 
@@ -185,6 +194,7 @@ void AIStartDMA(void) {
 void AIStopDMA(void) {
 #ifdef __EMSCRIPTEN__
     audio_dma_running = 0;
+    audio_device_started = 0;
 #endif
     if (audio_device != 0) SDL_PauseAudioDevice(audio_device, 1);
 }
@@ -240,13 +250,33 @@ int pc_audio_is_active(void) {
 void pc_audio_web_pump(void) {
     if (audio_device == 0 && audio_device_requested && !audio_device_failed) {
         audio_device_failed = !pc_audio_open_device();
+        if (audio_device != 0) {
+            SDL_PauseAudioDevice(audio_device, 1);
+            audio_device_started = 0;
+        }
     }
     if (audio_device != 0 && audio_dma_running) {
-        SDL_PauseAudioDevice(audio_device, 0);
         for (int i = 0; i < AUDIO_PRODUCE_MAX_FRAMES && pc_audio_get_buffer_fill() < AUDIO_PRODUCE_THRESHOLD; i++) {
             pc_audio_process_frame();
         }
+
+        if (!audio_device_started && pc_audio_get_buffer_fill() >= AUDIO_PRODUCE_THRESHOLD) {
+            SDL_PauseAudioDevice(audio_device, 0);
+            audio_device_started = 1;
+            printf("[AUDIO] Web playback started with fill=%d samples\n", pc_audio_get_buffer_fill());
+        }
+    } else if (audio_device != 0 && audio_device_started) {
+        SDL_PauseAudioDevice(audio_device, 1);
+        audio_device_started = 0;
     }
+}
+
+int pc_audio_web_get_underruns(void) {
+    return SDL_AtomicGet(&audio_underrun_count);
+}
+
+int pc_audio_web_get_overruns(void) {
+    return SDL_AtomicGet(&audio_overrun_count);
 }
 #endif
 

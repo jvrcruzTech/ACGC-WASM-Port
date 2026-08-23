@@ -133,6 +133,8 @@ void pc_audio_shutdown(void);
 void pc_audio_start_producer_thread(void);
 #ifdef __EMSCRIPTEN__
 void pc_audio_web_pump(void);
+int  pc_audio_web_get_underruns(void);
+int  pc_audio_web_get_overruns(void);
 #endif
 void pc_audio_mq_init(void);
 void pc_audio_mq_shutdown(void);

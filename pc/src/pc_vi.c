@@ -61,7 +61,13 @@ void VIWaitForRetrace(void) {
 
     Uint64 t_before_swap = SDL_GetPerformanceCounter();
     Uint64 t_before_swap_prof = pc_profiler_begin_timer();
+#ifdef __EMSCRIPTEN__
+    pc_audio_web_pump();
+#endif
     pc_platform_swap_buffers();
+#ifdef __EMSCRIPTEN__
+    pc_audio_web_pump();
+#endif
     pc_profiler_add_time(PC_PROF_TIMER_SWAP, t_before_swap_prof);
     Uint64 t_after_swap = SDL_GetPerformanceCounter();
 
@@ -88,8 +94,7 @@ void VIWaitForRetrace(void) {
                 /* Spin for sub-ms precision. */
                 while (elapsed_us < (Uint64)pace_us) {
 #ifdef __EMSCRIPTEN__
-                    Uint64 remain_us = (Uint64)pace_us - elapsed_us;
-                    emscripten_sleep((unsigned int)((remain_us + 999) / 1000));
+                    pc_audio_web_pump();
 #else
                     Uint64 remain_us = (Uint64)pace_us - elapsed_us;
                     if (remain_us > 2000) {
@@ -150,6 +155,8 @@ void VIWaitForRetrace(void) {
                        pc_emu64_frame_tri_cmds, pc_emu64_frame_vtx_cmds,
                        pc_emu64_frame_cull_visible, pc_emu64_frame_cull_rejected,
                        (unsigned int)gl_err, pc_audio_get_buffer_fill());
+                printf("[WEB/AUDIO] underruns=%d overruns=%d fill=%d\n",
+                       pc_audio_web_get_underruns(), pc_audio_web_get_overruns(), pc_audio_get_buffer_fill());
             }
 #endif
             fps_start = now;

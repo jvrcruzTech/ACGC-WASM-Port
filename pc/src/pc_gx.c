@@ -658,6 +658,8 @@ void pc_gx_cache_uniform_locations(GLuint shader, PCGXUloc* u) {
     for (i = 0; i < 8; i++) {
         snprintf(name, sizeof(name), "u_light_pos[%d]", i);
         u->light_pos[i] = UL(name);
+        snprintf(name, sizeof(name), "u_light_dir[%d]", i);
+        u->light_dir[i] = UL(name);
         snprintf(name, sizeof(name), "u_light_color[%d]", i);
         u->light_color[i] = UL(name);
     }
@@ -937,12 +939,14 @@ void pc_gx_flush_vertices(void) {
             loc = UL(alpha_lighting_enabled); if (loc >= 0) glUniform4iv(loc, 1, lighting_cfg1);
             loc = UL(mat_color); if (loc >= 0) glUniform4fv(loc, 2, &chan_color[0][0]);
             {
-                float lpos[8][3], lcol[8][4];
+                float lpos[8][3], ldir[8][3], lcol[8][4];
                 for (int i = 0; i < 8; i++) {
                     memcpy(lpos[i], g_gx.lights[i].pos, sizeof(lpos[i]));
+                    memcpy(ldir[i], g_gx.lights[i].dir, sizeof(ldir[i]));
                     memcpy(lcol[i], g_gx.lights[i].color, sizeof(lcol[i]));
                 }
                 loc = UL(light_pos[0]);   if (loc >= 0) glUniform3fv(loc, 8, &lpos[0][0]);
+                loc = UL(light_dir[0]);   if (loc >= 0) glUniform3fv(loc, 8, &ldir[0][0]);
                 loc = UL(light_color[0]); if (loc >= 0) glUniform4fv(loc, 8, &lcol[0][0]);
             }
         }

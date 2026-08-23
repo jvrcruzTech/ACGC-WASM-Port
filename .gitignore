@@ -23,6 +23,7 @@ build/
 build32/
 pc/build-wasm*/
 pc/include/generated/
+pc/shaders/
 .ninja_*
 build.ninja
 cmake-build-*/

@@ -64,7 +64,7 @@ static const char* DEFAULT_SETTINGS =
     "# Vertical sync: 0 = off, 1 = on\n"
     "vsync = 0\n"
     "\n"
-    "# Max FPS: 60, 120, 240, or 0 for uncapped\n"
+    "# Max FPS: any positive value, or 0 for uncapped\n"
     "max_fps = 60\n"
     "\n"
     "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n"
@@ -170,9 +170,6 @@ static void apply_frame_limit_setting(void) {
 
 static void apply_web_performance_settings(void) {
 #ifdef __EMSCRIPTEN__
-    if (g_pc_settings.max_fps <= 0 || g_pc_settings.max_fps > 60) {
-        g_pc_settings.max_fps = 60;
-    }
     if (g_pc_settings.msaa > 0) {
         g_pc_settings.msaa = 0;
     }
@@ -212,7 +209,7 @@ void pc_settings_save(void) {
         "fullscreen = %d\n\n"
         "# Vertical sync: 0 = off, 1 = on\n"
         "vsync = %d\n\n"
-        "# Max FPS: 60, 120, 240, or 0 for uncapped\n"
+        "# Max FPS: any positive value, or 0 for uncapped\n"
         "max_fps = %d\n\n"
         "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n"
         "msaa = %d\n\n"
@@ -262,7 +259,7 @@ void pc_settings_save(void) {
     fprintf(f, "# Vertical sync: 0 = off, 1 = on\n");
     fprintf(f, "vsync = %d\n", g_pc_settings.vsync);
     fprintf(f, "\n");
-    fprintf(f, "# Max FPS: 60, 120, 240, or 0 for uncapped\n");
+    fprintf(f, "# Max FPS: any positive value, or 0 for uncapped\n");
     fprintf(f, "max_fps = %d\n", g_pc_settings.max_fps);
     fprintf(f, "\n");
     fprintf(f, "# Anti-aliasing samples: 0 = off, 2, 4, or 8\n");

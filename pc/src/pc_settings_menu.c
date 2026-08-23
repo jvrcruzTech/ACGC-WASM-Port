@@ -278,12 +278,9 @@ static void item_cycle(int id, int dir) {
             s_pending.vsync = !s_pending.vsync;
             break;
         case ITEM_MAX_FPS: {
-            static const int steps[] = { 0, 60, 120, 180, 240, 300, 360 };
-            int idx = 0;
-            int count = sizeof(steps) / sizeof(steps[0]);
-            for (int i = 0; i < count; i++) if (s_pending.max_fps == steps[i]) { idx = i; break; }
-            idx = (idx + (dir > 0 ? 1 : count - 1)) % count;
-            s_pending.max_fps = steps[idx];
+            int v = s_pending.max_fps + (dir > 0 ? 10 : -10);
+            if (v < 0) v = 0;
+            s_pending.max_fps = v;
         } break;
         case ITEM_MSAA: {
             static const int steps[] = { 0, 2, 4, 8 };
