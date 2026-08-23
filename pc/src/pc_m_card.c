@@ -845,12 +845,14 @@ static int pc_save_scan_gci_dir(void) {
 int pc_save_reload(void) {
 #ifdef __EMSCRIPTEN__
     if (!pc_save_loaded) return 0;
-    return pc_save_read_gci(PC_GCI_PATH);
+    const char* path = (l_card_b_gci_path[0] != '\0' && l_mcd_keep_startCond == mCD_START_COND_INCOMING_FOREIGNER) ? l_card_b_gci_path : PC_GCI_PATH;
+    return pc_save_read_gci(path);
 #else
     struct stat st;
     if (!pc_save_loaded) return 0;
-    if (stat(PC_GCI_PATH, &st) == 0) {
-        return pc_save_read_gci(PC_GCI_PATH);
+    const char* path = (l_card_b_gci_path[0] != '\0' && l_mcd_keep_startCond == mCD_START_COND_INCOMING_FOREIGNER) ? l_card_b_gci_path : PC_GCI_PATH;
+    if (stat(path, &st) == 0) {
+        return pc_save_read_gci(path);
     }
     return pc_save_scan_gci_dir();
 #endif
@@ -864,11 +866,12 @@ int pc_save_check_and_load(void) {
             OSReport("[PC] Save: current working directory = '%s' (web byte-backed card)\n", cwd);
         }
     }
-    if (pc_save_read_gci(PC_GCI_PATH)) {
-        OSReport("[PC] GCI save loaded successfully from web bytes\n");
+    const char* path = (l_card_b_gci_path[0] != '\0' && l_mcd_keep_startCond == mCD_START_COND_INCOMING_FOREIGNER) ? l_card_b_gci_path : PC_GCI_PATH;
+    if (pc_save_read_gci(path)) {
+        OSReport("[PC] GCI save loaded successfully from web bytes (path=%s)\n", path);
         return TRUE;
     }
-    OSReport("[PC] No web GCI save found\n");
+    OSReport("[PC] No web GCI save found at %s\n", path);
     return FALSE;
 #else
     struct stat st;
@@ -882,15 +885,16 @@ int pc_save_check_and_load(void) {
     pc_ensure_save_dirs();
     pc_save_migrate_legacy();
 
-    if (stat(PC_GCI_PATH, &st) == 0) {
-        OSReport("[PC] Found GCI save: %s (%ld bytes)\n", PC_GCI_PATH, (long)st.st_size);
-        if (pc_save_read_gci(PC_GCI_PATH)) {
+    const char* path = (l_card_b_gci_path[0] != '\0' && l_mcd_keep_startCond == mCD_START_COND_INCOMING_FOREIGNER) ? l_card_b_gci_path : PC_GCI_PATH;
+    if (stat(path, &st) == 0) {
+        OSReport("[PC] Found GCI save: %s (%ld bytes)\n", path, (long)st.st_size);
+        if (pc_save_read_gci(path)) {
             OSReport("[PC] GCI save loaded successfully\n");
             return TRUE;
         }
         OSReport("[PC] GCI save load FAILED\n");
     } else {
-        OSReport("[PC] No GCI save at %s\n", PC_GCI_PATH);
+        OSReport("[PC] No GCI save at %s\n", path);
     }
 
     OSReport("[PC] Scanning for other GCI files...\n");
@@ -989,10 +993,12 @@ void mCD_init_card(void) {
 
 void mCD_InitAll(void) {
     /* ARAM blocks must persist — don't null them */
-    memset(&l_mcd_foreigner_file, 0, sizeof(l_mcd_foreigner_file));
-    l_keepSave_set = FALSE;
-    l_mcd_keep_startCond = 0;
-    l_card_b_gci_path[0] = '\0';
+    if (l_mcd_keep_startCond != mCD_START_COND_INCOMING_FOREIGNER) {
+        memset(&l_mcd_foreigner_file, 0, sizeof(l_mcd_foreigner_file));
+        l_keepSave_set = FALSE;
+        l_mcd_keep_startCond = 0;
+        l_card_b_gci_path[0] = '\0';
+    }
 }
 
 int mCD_InitGameStart_bg(int player_no, int card_private_idx, int start_cond, s32* mounted_chan) {
