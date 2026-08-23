@@ -84,6 +84,16 @@ u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
 #ifdef __EMSCRIPTEN__
+    if (!s_web_pad_ready) {
+        status[0].err = 0;
+        return PAD_CHAN0_BIT;
+    }
+#ifdef KEYBOARD_TYPING
+    if (g_pc_typing_mode && g_pc_editor_active) {
+        status[0].err = 0;
+        return PAD_CHAN0_BIT;
+    }
+#endif
     status[0].button = s_web_pad_buttons;
     status[0].stickX = s_web_stick_x;
     status[0].stickY = s_web_stick_y;
