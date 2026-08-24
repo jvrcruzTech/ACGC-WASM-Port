@@ -44,33 +44,16 @@ static u8 pad_trigger_value(PCPadCode code) {
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 
-static int s_web_pad_frozen = 0;
-static u16 s_web_pad_buttons = 0;
-static s8 s_web_stick_x = 0;
-static s8 s_web_stick_y = 0;
-static s8 s_web_substick_x = 0;
-static s8 s_web_substick_y = 0;
-static u8 s_web_trigger_l = 0;
-static u8 s_web_trigger_r = 0;
+EM_JS(int, pc_web_pad_field, (int field), {
+    var kit = globalThis.__USER_INPUT_KIT__;
+    if (!kit || typeof kit.readGamepadField !== 'function') {
+        return field === 0 ? 1 : 0;
+    }
+    return kit.readGamepadField(field) | 0;
+});
 
 int pc_web_is_pad_frozen(void) {
-    return s_web_pad_frozen;
-}
-
-EMSCRIPTEN_KEEPALIVE
-void pc_web_set_pad_frozen(int frozen) {
-    s_web_pad_frozen = frozen;
-}
-
-EMSCRIPTEN_KEEPALIVE
-void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 substickY, u8 triggerL, u8 triggerR) {
-    s_web_pad_buttons = buttons;
-    s_web_stick_x = stickX;
-    s_web_stick_y = stickY;
-    s_web_substick_x = substickX;
-    s_web_substick_y = substickY;
-    s_web_trigger_l = triggerL;
-    s_web_trigger_r = triggerR;
+    return pc_web_pad_field(0);
 }
 #endif
 
@@ -94,7 +77,7 @@ u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
 #ifdef __EMSCRIPTEN__
-    if (s_web_pad_frozen || (g_pc_typing_mode && g_pc_editor_active)) {
+    if (pc_web_is_pad_frozen() || (g_pc_typing_mode && g_pc_editor_active)) {
         status[0].button = 0;
         status[0].stickX = 0;
         status[0].stickY = 0;
@@ -106,13 +89,13 @@ u32 PADRead(PADStatus* status) {
         return PAD_CHAN0_BIT;
     }
 
-    status[0].button = s_web_pad_buttons;
-    status[0].stickX = s_web_stick_x;
-    status[0].stickY = s_web_stick_y;
-    status[0].substickX = s_web_substick_x;
-    status[0].substickY = s_web_substick_y;
-    status[0].triggerLeft = s_web_trigger_l;
-    status[0].triggerRight = s_web_trigger_r;
+    status[0].button = (u16)pc_web_pad_field(1);
+    status[0].stickX = (s8)pc_web_pad_field(2);
+    status[0].stickY = (s8)pc_web_pad_field(3);
+    status[0].substickX = (s8)pc_web_pad_field(4);
+    status[0].substickY = (s8)pc_web_pad_field(5);
+    status[0].triggerLeft = (u8)pc_web_pad_field(6);
+    status[0].triggerRight = (u8)pc_web_pad_field(7);
     status[0].err = 0;
     return PAD_CHAN0_BIT;
 #else
