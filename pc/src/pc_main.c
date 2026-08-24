@@ -44,6 +44,13 @@ int           g_pc_window_w = PC_SCREEN_WIDTH;
 int           g_pc_window_h = PC_SCREEN_HEIGHT;
 int           g_pc_widescreen_stretch = 0;
 
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+void pc_web_request_quit(void) {
+    g_pc_running = 0;
+}
+#endif
+
 /* exe image range -- used by seg2k0 to distinguish pointers from segment addresses */
 unsigned int pc_image_base = 0;
 unsigned int pc_image_end  = 0;
