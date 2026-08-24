@@ -9,6 +9,7 @@
 #define STICK_MAGNITUDE     80
 #define RUMBLE_DURATION_MS  200
 
+#ifndef __EMSCRIPTEN__
 static SDL_GameController* g_controller = NULL;
 
 /* deadzone percent (0-40) -> raw SDL axis threshold */
@@ -38,6 +39,7 @@ static u8 pad_trigger_value(PCPadCode code) {
     }
     return SDL_GameControllerGetButton(g_controller, (SDL_GameControllerButton)code) ? 255 : 0;
 }
+#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -73,6 +75,9 @@ void pc_web_set_pad_state(u16 buttons, s8 stickX, s8 stickY, s8 substickX, s8 su
 #endif
 
 BOOL PADInit(void) {
+#ifdef __EMSCRIPTEN__
+    return TRUE;
+#else
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
             g_controller = SDL_GameControllerOpen(i);
@@ -82,13 +87,13 @@ BOOL PADInit(void) {
         }
     }
     return TRUE;
+#endif
 }
 
 u32 PADRead(PADStatus* status) {
     memset(status, 0, sizeof(PADStatus) * 4);
 
 #ifdef __EMSCRIPTEN__
-    /* Block BOTH SDL and Web JS inputs together at once when pad is frozen by Web UI */
     if (s_web_pad_frozen || (g_pc_typing_mode && g_pc_editor_active)) {
         status[0].button = 0;
         status[0].stickX = 0;
@@ -100,10 +105,20 @@ u32 PADRead(PADStatus* status) {
         status[0].err = 0;
         return PAD_CHAN0_BIT;
     }
-#endif
 
+    status[0].button = s_web_pad_buttons;
+    status[0].stickX = s_web_stick_x;
+    status[0].stickY = s_web_stick_y;
+    status[0].substickX = s_web_substick_x;
+    status[0].substickY = s_web_substick_y;
+    status[0].triggerLeft = s_web_trigger_l;
+    status[0].triggerRight = s_web_trigger_r;
+    status[0].err = 0;
+    return PAD_CHAN0_BIT;
+#else
     const u8* keys = SDL_GetKeyboardState(NULL);
     u32 mouse = SDL_GetMouseState(NULL, NULL);
+
     u16 buttons = 0;
     s8 stickX = 0, stickY = 0;
     s8 cstickX = 0, cstickY = 0;
@@ -223,13 +238,19 @@ u32 PADRead(PADStatus* status) {
     status[0].err = 0; /* PAD_ERR_NONE */
 
     return PAD_CHAN0_BIT; /* Controller 1 connected */
+#endif
 }
 
 void PADControlMotor(s32 chan, u32 command) {
+#ifndef __EMSCRIPTEN__
     if (g_controller && chan == 0) {
         u16 intensity = (command == 1) ? 0xFFFF : 0;
         SDL_GameControllerRumble(g_controller, intensity, intensity, RUMBLE_DURATION_MS);
     }
+#else
+    (void)chan;
+    (void)command;
+#endif
 }
 
 void PADControlAllMotors(const u32* commands) {
