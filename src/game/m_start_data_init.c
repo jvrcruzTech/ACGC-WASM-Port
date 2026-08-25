@@ -25,6 +25,62 @@
 #include "m_common_data.h"
 #include "m_design_ovl.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(int, pc_web_ac_can_use_resident_js, (int resident_slot, int player_id), {
+    if (!Module.acCanUseResident) return 1;
+    return Module.acCanUseResident(resident_slot, player_id) ? 1 : 0;
+});
+
+EM_JS(void, pc_web_ac_register_resident_js, (int resident_slot, int player_id, const char* name_ptr), {
+    if (!Module.acRegisterResident) return;
+    Module.acRegisterResident({
+        residentSlot: resident_slot,
+        playerId: player_id,
+        playerName: UTF8ToString(name_ptr)
+    });
+});
+
+EM_JS(int, pc_web_ac_is_save_owner_js, (void), {
+    return Module.acIsSaveOwner ? 1 : 0;
+});
+
+static void pc_web_ac_copy_player_name(char* dst, const u8* src) {
+    int i;
+    for (i = 0; i < PLAYER_NAME_LEN; i++) {
+        unsigned char c = src[i];
+        dst[i] = (c >= 32 && c <= 126) ? (char)c : '?';
+    }
+    dst[PLAYER_NAME_LEN] = '\0';
+}
+
+static int pc_web_ac_can_use_resident(int resident_slot, Private_c* priv) {
+    if (resident_slot < 0 || resident_slot >= PLAYER_NUM || priv == NULL) return FALSE;
+    return pc_web_ac_can_use_resident_js(resident_slot, priv->player_ID.player_id);
+}
+
+static void pc_web_ac_register_resident(int resident_slot, Private_c* priv) {
+    char name[PLAYER_NAME_LEN + 1];
+    if (resident_slot < 0 || resident_slot >= PLAYER_NUM || priv == NULL || priv->exists != TRUE) return;
+    pc_web_ac_copy_player_name(name, priv->player_ID.player_name);
+    pc_web_ac_register_resident_js(resident_slot, priv->player_ID.player_id, name);
+}
+
+static void pc_web_ac_register_all_residents(void) {
+    int i;
+    if (!pc_web_ac_is_save_owner_js()) return;
+    for (i = 0; i < PLAYER_NUM; i++) {
+        Private_c* priv = Save_GetPointer(private_data[i]);
+        pc_web_ac_register_resident(i, priv);
+    }
+}
+#else
+#define pc_web_ac_can_use_resident(slot, priv) TRUE
+#define pc_web_ac_register_resident(slot, priv) ((void)0)
+#define pc_web_ac_register_all_residents() ((void)0)
+#endif
+
 static void famicom_emu_initial_common_data() {
     // stubbed
 }
@@ -280,6 +336,8 @@ static int mSDI_StartInitNew(GAME* game, int player_no, int malloc_flag) {
 
     Common_Set(_2dbe1, 0);
 
+    pc_web_ac_register_resident(player_no, Common_Get(now_private));
+
     return ret;
 }
 #else
@@ -389,6 +447,8 @@ static int mSDI_StartInitNew(GAME* game, int player_no, int malloc_flag) {
 
     Common_Set(_2dbe1, 0);
 
+    pc_web_ac_register_resident(player_no, Common_Get(now_private));
+
     return TRUE;
 }
 #endif
@@ -412,6 +472,9 @@ static int mSDI_StartInitFrom(GAME* game, int player_no, int malloc_flag) {
         if (mPr_CheckPrivate(priv) == TRUE) {
 
             if (priv->exists == TRUE) {
+                if (!pc_web_ac_can_use_resident(player_no, priv)) {
+                    return FALSE;
+                }
                 Common_Set(now_private, priv);
                 Common_Set(player_no, player_no);
                 mFM_SetBlockKindLoadCombi(g);
@@ -422,6 +485,8 @@ static int mSDI_StartInitFrom(GAME* game, int player_no, int malloc_flag) {
                 mNpc_SetRemoveAnimalNo(Save_GetPointer(remove_animal_idx), animals, -1);
                 mMkRm_MarkRoom(g);
                 mRmTp_SetDefaultLightSwitchData(2); // TODO: enum
+                pc_web_ac_register_all_residents();
+                pc_web_ac_register_resident(player_no, priv);
                 res = TRUE;
             } else {
                 /* Player loaded their player data while "out travelling" */
@@ -447,6 +512,7 @@ static int mSDI_StartInitFrom(GAME* game, int player_no, int malloc_flag) {
 
                 mMkRm_MarkRoom(g);
                 mRmTp_SetDefaultLightSwitchData(2); // TODO: enum
+                pc_web_ac_register_resident(player_no, priv);
                 res = TRUE;
             }
         }
@@ -489,6 +555,7 @@ static int mSDI_StartInitNewPlayer(GAME* game, int player_no, int malloc_flag) {
             mSDI_ClearMoneyPlayerHomeStationBlock();
             mRmTp_SetDefaultLightSwitchData(1); // TODO: enum
             mFI_PullTanukiPathTrees();
+            pc_web_ac_register_resident(player_no, priv);
             res = TRUE;
         }
     }

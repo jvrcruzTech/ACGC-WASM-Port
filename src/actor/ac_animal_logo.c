@@ -342,7 +342,16 @@ static void aAL_fade_out_start_wait_init(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
 
 #ifdef PC_ENHANCEMENTS
 #ifdef __EMSCRIPTEN__
+EM_JS(int, aAL_pc_can_manage_travel_codes_js, (void), {
+  if (Module.acTravelCodesEnabled === false) return 0;
+  return 1;
+});
+
 EM_JS(void, aAL_pc_manage_travel_codes_js, (void), {
+  if (Module.acTravelCodesEnabled === false) {
+    console.warn("[Animal Crossing title] travel code manager is hidden during shared visits");
+    return;
+  }
   if (Module.acManageTravelCodes) {
     Module.acManageTravelCodes();
   } else {
@@ -350,6 +359,14 @@ EM_JS(void, aAL_pc_manage_travel_codes_js, (void), {
   }
 });
 #endif
+
+static int aAL_pc_can_manage_travel_codes(void) {
+#ifdef __EMSCRIPTEN__
+  return aAL_pc_can_manage_travel_codes_js();
+#else
+  return TRUE;
+#endif
+}
 
 static void aAL_pc_manage_travel_codes(void) {
 #ifdef __EMSCRIPTEN__
@@ -412,15 +429,17 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
     return;
   }
 
-  /* Main menu navigation (3 items: Start / Options / Travel Codes) */
+  /* Main menu navigation */
   if (actor->pc_cursor_cooldown <= 0.0f) {
+    int item_count = aAL_pc_can_manage_travel_codes() ? 3 : 2;
+    if (actor->pc_menu_sel >= item_count) actor->pc_menu_sel = item_count - 1;
     if (stick_y > 30 || (on_btn & BUTTON_DUP)) {
       if (actor->pc_menu_sel > 0) {
         actor->pc_menu_sel--;
         actor->pc_cursor_cooldown = 10.0f;
       }
     } else if (stick_y < -30 || (on_btn & BUTTON_DDOWN)) {
-      if (actor->pc_menu_sel < 2) {
+      if (actor->pc_menu_sel < item_count - 1) {
         actor->pc_menu_sel++;
         actor->pc_cursor_cooldown = 10.0f;
       }
@@ -443,8 +462,10 @@ static void aAL_pc_game_start_wait(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
         pc_settings_menu_enter();
         break;
       case 2: /* Manage Travel Codes */
-        aAL_pc_manage_travel_codes();
-        actor->pc_cursor_cooldown = 10.0f;
+        if (aAL_pc_can_manage_travel_codes()) {
+          aAL_pc_manage_travel_codes();
+          actor->pc_cursor_cooldown = 10.0f;
+        }
         break;
     }
   }
@@ -828,7 +849,9 @@ static void aAL_pc_menu_draw(ANIMAL_LOGO_ACTOR* actor, GAME* game) {
   /* Hide the title's main menu items while the Options overlay is open, else
    * Start/Options/Quit bleed through the dimmed backdrop. */
   if (!actor->pc_options_open) {
-    for (int i = 0; i < 3; i++) {
+    int item_count = aAL_pc_can_manage_travel_codes() ? 3 : 2;
+    if (sel >= item_count) sel = item_count - 1;
+    for (int i = 0; i < item_count; i++) {
       int on = (sel == i);
       pc_menu_draw_centered(game, labels[i], y_base + i * line_h,
         on ? sel_r[td] : dim_r[td],

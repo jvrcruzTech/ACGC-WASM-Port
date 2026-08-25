@@ -13,6 +13,18 @@
 #include "m_timeIn_ovl.h"
 #include "dolphin/os/OSRtc.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(int, aNPS2_pc_can_delete_resident_js, (int player_no), {
+    if (Module.acCanDeleteResident && !Module.acCanDeleteResident(player_no)) {
+        if (Module.acShowToast) Module.acShowToast("Only the town owner can delete residents.", "error");
+        return 0;
+    }
+    return 1;
+});
+#endif
+
 enum {
     aNPS2_TALK_SETUP_YURE,
     aNPS2_TALK_SETUP_SOUND,

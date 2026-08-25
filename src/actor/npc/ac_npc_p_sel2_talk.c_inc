@@ -1242,6 +1242,12 @@ static void aNPS2_return_title(NPC_P_SEL2_ACTOR* p_sel2, GAME_PLAY* play) {
 static void aNPS2_clr_pl_data_init(NPC_P_SEL2_ACTOR* p_sel2, GAME_PLAY* play) {
     int pl_no = p_sel2->player_no;
 
+#ifdef __EMSCRIPTEN__
+    if (!aNPS2_pc_can_delete_resident_js(pl_no)) {
+        return;
+    }
+#endif
+
     mPO_clear_delivery_mail(mHS_get_arrange_idx(pl_no));
     mPr_ClearPrivateInfo(Save_GetPointer(private_data[pl_no]));
     mHm_ClearHomeInfo(mHS_get_arrange_idx(pl_no));
